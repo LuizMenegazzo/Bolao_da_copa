@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bolão da Copa UFSM-CS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">UFSM Cachoeira do Sul</p>
+          <h1>Bolão da Copa</h1>
+          <p class="hero-text">Cadastre cartelas, acompanhe palpites e atualize placares em um só lugar.</p>
+        </div>
+        <div class="hero-badge">2026</div>
+      </section>
+
+      <section id="home-screen" class="panel home-panel">
+        <button class="main-action" type="button" data-screen="add-card">
+          <span>Adicionar cartela</span>
+          <small>Preencher nome e palpites da fase de grupos</small>
+        </button>
+        <button class="main-action secondary-action" type="button" data-screen="follow-pool">
+          <span>Acompanhar bolão</span>
+          <small>Ranking geral e detalhes por cartela</small>
+        </button>
+        <button class="main-action secondary-action" type="button" data-screen="update-scores">
+          <span>Atualizar placares</span>
+          <small>Informar resultados oficiais jogo a jogo</small>
+        </button>
+      </section>
+
+      <section id="add-card-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Nova cartela</p>
+            <h2 id="form-title">Adicionar cartela</h2>
+            <p>Informe o jogador e os palpites dos jogos, separados por grupos.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-home">Voltar</button>
+        </div>
+
+        <section class="saved-cards-panel" aria-labelledby="saved-cards-title">
+          <div class="saved-cards-header">
+            <div>
+              <p class="eyebrow">Cartelas preenchidas</p>
+              <h3 id="saved-cards-title">Cartelas salvas</h3>
+            </div>
+            <button class="ghost-button" type="button" id="new-card-button">Nova cartela</button>
+          </div>
+          <div id="saved-cards-list" class="saved-cards-list">
+            <p class="empty-state">Carregando cartelas...</p>
+          </div>
+        </section>
+
+        <form id="cartela-form">
+          <label class="player-field">
+            <span>Nome do jogador</span>
+            <input id="player-name" name="playerName" type="text" placeholder="Ex.: Maria Silva" autocomplete="name" required />
+          </label>
+
+          <div id="matches-container" class="groups-grid" aria-live="polite"></div>
+
+          <div class="save-bar">
+            <p id="form-message" role="status"></p>
+            <button class="save-button" type="submit">Salvar cartela</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="update-scores-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Resultados oficiais</p>
+            <h2>Atualizar placares</h2>
+            <p>Preencha apenas os jogos que já aconteceram. Os demais podem ficar vazios.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-home-scores">Voltar</button>
+        </div>
+
+        <form id="results-form">
+          <div id="results-container" class="days-list" aria-live="polite"></div>
+
+          <div class="save-bar">
+            <p id="results-message" role="status"></p>
+            <button class="save-button" type="submit">Salvar placares</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="follow-pool-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Acompanhar bolão</p>
+            <h2>Classificação e pontuação</h2>
+            <p>Ranking calculado com base nos resultados já informados em Atualizar placares.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-home-follow">Voltar</button>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Acompanhar bolão">
+          <button class="tab-button active" type="button" data-follow-tab="ranking">Classificação geral</button>
+          <button class="tab-button" type="button" data-follow-tab="individual">Pontuação individual</button>
+        </div>
+
+        <section id="ranking-tab" class="follow-tab">
+          <div class="ranking-actions">
+            <button class="save-button" type="button" id="generate-ranking-image">Gerar imagem do ranking 📱</button>
+          </div>
+          <div id="ranking-summary" class="ranking-summary"></div>
+          <div id="ranking-list" class="ranking-list"></div>
+          <div id="ranking-image-output" class="ranking-image-output"></div>
+        </section>
+
+        <section id="individual-tab" class="follow-tab hidden">
+          <div class="individual-toolbar">
+            <label>
+              <span>Escolha uma cartela</span>
+              <select id="cartela-select"></select>
+            </label>
+          </div>
+          <div id="individual-summary" class="individual-summary"></div>
+          <div id="individual-details" class="individual-details"></div>
+        </section>
+      </section>
+
+      <div id="toast" class="toast hidden" role="status"></div>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

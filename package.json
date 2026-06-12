@@ -1,0 +1,19 @@
+{
+  "name": "bolao-da-copa-ufsm-cs",
+  "version": "0.1.0",
+  "description": "API e front-end do Bolão da Copa da UFSM Cachoeira do Sul.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "keywords": [
+    "bolao",
+    "copa",
+    "ufsm"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}
