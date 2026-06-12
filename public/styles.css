@@ -385,6 +385,30 @@ button {
   text-align: right;
 }
 
+.team-with-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  vertical-align: middle;
+}
+
+.team-name.home-team .team-with-flag,
+.upcoming-match-teams span:first-child .team-with-flag {
+  justify-content: flex-end;
+}
+
+.team-flag {
+  width: 1.35em;
+  flex: 0 0 auto;
+  text-align: center;
+  filter: drop-shadow(0 1px 1px rgba(47, 28, 110, 0.12));
+}
+
+.match-title-versus {
+  margin: 0 4px;
+  color: var(--muted);
+}
+
 .score-box {
   display: flex;
   align-items: center;
@@ -1166,6 +1190,12 @@ button {
 
   .team-name.home-team {
     text-align: center;
+  }
+
+  .team-with-flag,
+  .team-name.home-team .team-with-flag,
+  .upcoming-match-teams span:first-child .team-with-flag {
+    justify-content: center;
   }
 
   .score-box {

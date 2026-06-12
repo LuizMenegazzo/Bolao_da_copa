@@ -37,6 +37,57 @@ const SCORE_LABELS = {
   none: "Nenhum acerto"
 };
 
+const TEAM_FLAGS = {
+  "África do Sul": "🇿🇦",
+  "Alemanha": "🇩🇪",
+  "Argentina": "🇦🇷",
+  "Argélia": "🇩🇿",
+  "Arábia Saudita": "🇸🇦",
+  "Austrália": "🇦🇺",
+  "Áustria": "🇦🇹",
+  "Bélgica": "🇧🇪",
+  "Bósnia": "🇧🇦",
+  "BRASIL": "🇧🇷",
+  "Cabo Verde": "🇨🇻",
+  "Canadá": "🇨🇦",
+  "Catar": "🇶🇦",
+  "Colômbia": "🇨🇴",
+  "Coreia do Sul": "🇰🇷",
+  "Costa do Marfim": "🇨🇮",
+  "Croácia": "🇭🇷",
+  "Curaçao": "🇨🇼",
+  "Egito": "🇪🇬",
+  "Equador": "🇪🇨",
+  "Escócia": String.fromCodePoint(0x1F3F4, 0xE0067, 0xE0062, 0xE0073, 0xE0063, 0xE0074, 0xE007F),
+  "Espanha": "🇪🇸",
+  "Estados Unidos": "🇺🇸",
+  "França": "🇫🇷",
+  "Gana": "🇬🇭",
+  "Haiti": "🇭🇹",
+  "Holanda": "🇳🇱",
+  "Inglaterra": String.fromCodePoint(0x1F3F4, 0xE0067, 0xE0062, 0xE0065, 0xE006E, 0xE0067, 0xE007F),
+  "Irã": "🇮🇷",
+  "Iraque": "🇮🇶",
+  "Japão": "🇯🇵",
+  "Jordânia": "🇯🇴",
+  "Marrocos": "🇲🇦",
+  "México": "🇲🇽",
+  "Noruega": "🇳🇴",
+  "Nova Zelândia": "🇳🇿",
+  "Panamá": "🇵🇦",
+  "Paraguai": "🇵🇾",
+  "Portugal": "🇵🇹",
+  "RD Congo": "🇨🇩",
+  "República Tcheca": "🇨🇿",
+  "Senegal": "🇸🇳",
+  "Suécia": "🇸🇪",
+  "Suíça": "🇨🇭",
+  "Tunísia": "🇹🇳",
+  "Turquia": "🇹🇷",
+  "Uruguai": "🇺🇾",
+  "Uzbequistão": "🇺🇿"
+};
+
 let groups = [];
 let cartelas = [];
 let results = {};
@@ -370,13 +421,13 @@ function renderMatch(match) {
         ${match.dateLabel}<br />
         ${match.dayName}
       </div>
-      <div class="team-name home-team">${match.home}</div>
+      <div class="team-name home-team">${formatTeamName(match.home)}</div>
       <div class="score-box">
         <input class="score-input" type="number" inputmode="numeric" min="0" max="99" required aria-label="Gols de ${match.home}" data-match-id="${match.id}" data-side="homeScore" />
         <span class="versus">x</span>
         <input class="score-input" type="number" inputmode="numeric" min="0" max="99" required aria-label="Gols de ${match.away}" data-match-id="${match.id}" data-side="awayScore" />
       </div>
-      <div class="team-name">${match.away}</div>
+      <div class="team-name">${formatTeamName(match.away)}</div>
     </div>
   `;
 }
@@ -414,13 +465,13 @@ function renderResultMatch(match) {
         <strong>${match.time}</strong><br />
         Grupo ${match.group}
       </div>
-      <div class="team-name home-team">${match.home}</div>
+      <div class="team-name home-team">${formatTeamName(match.home)}</div>
       <div class="score-box">
         <input class="score-input result-input" type="number" inputmode="numeric" min="0" max="99" aria-label="Gols de ${match.home}" data-match-id="${match.id}" data-side="homeScore" value="${hasResult ? result.homeScore : ""}" />
         <span class="versus">x</span>
         <input class="score-input result-input" type="number" inputmode="numeric" min="0" max="99" aria-label="Gols de ${match.away}" data-match-id="${match.id}" data-side="awayScore" value="${hasResult ? result.awayScore : ""}" />
       </div>
-      <div class="team-name">${match.away}</div>
+      <div class="team-name">${formatTeamName(match.away)}</div>
       <div class="result-status ${hasResult ? "saved" : ""}">${hasResult ? "Salvo" : "Pendente"}</div>
     </div>
   `;
@@ -549,7 +600,7 @@ function renderIndividualCartela(cartelaId) {
   individualDetails.innerHTML = entry.details.map((detail) => `
     <article class="score-detail-card ${detail.type}">
       <div class="score-detail-main">
-        <strong>${detail.match.home} x ${detail.match.away}</strong>
+        <strong>${formatMatchTitle(detail.match)}</strong>
         <span>${detail.match.dateLabel} • ${detail.match.time} • Grupo ${detail.match.group}</span>
       </div>
       <div class="score-comparison">
@@ -652,7 +703,7 @@ function renderPersonalScoredMatches(entry) {
       ${entry.details.map((detail) => `
         <article class="score-detail-card ${detail.type}">
           <div class="score-detail-main">
-            <strong>${detail.match.home} x ${detail.match.away}</strong>
+            <strong>${formatMatchTitle(detail.match)}</strong>
             <span>${detail.match.dateLabel} • ${detail.match.time} • Grupo ${detail.match.group}</span>
           </div>
           <div class="score-comparison">
@@ -683,9 +734,9 @@ function renderUpcomingPredictions(upcomingPredictions) {
             <span>${match.dayName} • ${match.time} • Grupo ${match.group}</span>
           </div>
           <div class="upcoming-match-teams">
-            <span>${match.home}</span>
+            <span>${formatTeamName(match.home)}</span>
             <strong>x</strong>
-            <span>${match.away}</span>
+            <span>${formatTeamName(match.away)}</span>
           </div>
           <div class="upcoming-prediction-score">
             <span>Palpite</span>
@@ -1238,6 +1289,21 @@ function formatPrediction(prediction) {
   }
 
   return `${prediction.homeScore}x${prediction.awayScore}`;
+}
+
+function formatMatchTitle(match) {
+  return `${formatTeamName(match.home)} <span class="match-title-versus">x</span> ${formatTeamName(match.away)}`;
+}
+
+function formatTeamName(teamName) {
+  const flag = TEAM_FLAGS[teamName] || "🏳️";
+
+  return `
+    <span class="team-with-flag">
+      <span class="team-flag" aria-hidden="true">${flag}</span>
+      <span>${escapeHtml(teamName)}</span>
+    </span>
+  `;
 }
 
 function escapeHtml(value) {
