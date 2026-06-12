@@ -139,6 +139,29 @@ const TEAM_FLAG_CODES = {
   "UZBEQUISTAO": "uz"
 };
 
+const PLAYER_CHIBIS = {
+  "CELSO": "celso.png",
+  "CRICIELE": "criciele.png",
+  "CRIS": "cris.png",
+  "GUSTAVO": "gustavo.png",
+  "GABRIEL": "gabriel.png",
+  "JEFF": "jeff.png",
+  "VANDREI": "vandrei.png",
+  "JOAO LAURO": "joao-lauro.png",
+  "LAURA": "laura.png",
+  "THIELI": "thieli.png",
+  "ANDERSON": "anderson.png",
+  "AMANDINHA": "amandinha.png",
+  "LUIZ": "luiz.png",
+  "DANIEL": "daniel.png",
+  "CARLA": "carla.png",
+  "PC": "pc.png",
+  "NELSON": "nelson.png",
+  "DION": "dion.png",
+  "LUCAS": "lucas.png",
+  "VINICIUS": "vinicius.png"
+};
+
 let groups = [];
 let cartelas = [];
 let results = {};
@@ -590,7 +613,10 @@ function renderRanking(scoredMatches) {
 
     return `
       <article class="ranking-card ${index < 3 ? "podium" : ""}">
-        <div class="rank-position">${rankBadge}</div>
+        <div class="ranking-rank-area">
+          <div class="rank-position">${rankBadge}</div>
+          ${renderChibiAvatar(entry.playerName, "ranking-chibi")}
+        </div>
         <div class="ranking-player">
           <strong>${escapeHtml(entry.playerName)}</strong>
           <span>${entry.played} jogos pontuados • ${accuracy}% de placares exatos</span>
@@ -675,6 +701,7 @@ function renderPersonalCardsGrid() {
 
   personalCardsGrid.innerHTML = personalEntries.map((entry, index) => `
     <button class="personal-card-button ${index === 0 ? "active" : ""}" type="button" data-personal-cartela-id="${entry.id}">
+      ${renderChibiAvatar(entry.playerName, "personal-card-chibi")}
       <span class="personal-card-rank">${entry.rank}º</span>
       <strong>${escapeHtml(entry.playerName)}</strong>
       <small>${entry.total} pts • ${entry.played} jogos avaliados</small>
@@ -703,10 +730,13 @@ function renderPersonalCardDetails(cartelaId) {
 
   personalCardDetails.innerHTML = `
     <section class="personal-hero-card">
-      <div>
+      <div class="personal-hero-player">
+        ${renderChibiAvatar(entry.playerName, "personal-hero-chibi")}
+        <div>
         <p class="eyebrow">Cartela selecionada</p>
         <h3>${escapeHtml(entry.playerName)}</h3>
         <p>${entry.rank}º lugar na classificação geral</p>
+        </div>
       </div>
       <div class="personal-total">${entry.total}<small>pts</small></div>
     </section>
@@ -1340,6 +1370,50 @@ function formatPrediction(prediction) {
   }
 
   return `${prediction.homeScore}x${prediction.awayScore}`;
+}
+
+function renderChibiAvatar(playerName, className = "") {
+  const safePlayerName = escapeHtml(playerName);
+  const chibiFile = PLAYER_CHIBIS[getPersonKey(playerName)];
+
+  if (!chibiFile) {
+    const initials = getInitials(playerName);
+
+    return `
+      <span class="chibi-avatar chibi-fallback ${className}" aria-label="Avatar de ${safePlayerName}">
+        ${initials}
+      </span>
+    `;
+  }
+
+  return `
+    <img
+      class="chibi-avatar ${className}"
+      src="/chibis/${chibiFile}"
+      alt="Chibi de ${safePlayerName}"
+      loading="lazy"
+      decoding="async"
+    />
+  `;
+}
+
+function getPersonKey(name) {
+  return String(name)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
+
+function getInitials(name) {
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0] || "")
+    .join("")
+    .toUpperCase() || "?";
 }
 
 function formatMatchTitle(match) {
