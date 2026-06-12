@@ -774,15 +774,87 @@ button {
 }
 
 @media (max-width: 680px) {
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(25, 195, 125, 0.22), transparent 18rem),
+      linear-gradient(180deg, #f6f2ff 0%, #eef8ff 100%);
+  }
+
   .app-shell {
-    width: min(100% - 20px, 1180px);
-    padding: 10px 0 24px;
+    width: 100%;
+    padding: 0 10px 96px;
   }
 
   .hero,
   .panel {
-    border-radius: 24px;
-    padding: 20px;
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .hero {
+    gap: 16px;
+    margin: 10px 0 12px;
+    box-shadow: 0 14px 34px rgba(47, 28, 110, 0.18);
+  }
+
+  .hero h1 {
+    font-size: clamp(2.45rem, 15vw, 4rem);
+    line-height: 0.94;
+  }
+
+  .hero-text {
+    margin-top: 12px;
+    font-size: 0.98rem;
+  }
+
+  .hero-badge {
+    width: 76px;
+    height: 76px;
+    font-size: 1.2rem;
+  }
+
+  .eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+  }
+
+  .home-panel {
+    gap: 10px;
+    padding: 12px;
+    border-radius: 22px;
+  }
+
+  .main-action {
+    min-height: unset;
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .main-action:hover {
+    transform: none;
+  }
+
+  .main-action span {
+    margin-bottom: 6px;
+    font-size: 1.2rem;
+  }
+
+  .main-action small {
+    font-size: 0.86rem;
+  }
+
+  .section-header {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .section-header h2 {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .section-header p:not(.eyebrow) {
+    font-size: 0.94rem;
   }
 
   .section-header,
@@ -790,6 +862,21 @@ button {
   .save-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .ghost-button,
+  .save-button,
+  .small-button,
+  .danger-button,
+  .download-button {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .saved-cards-panel {
+    margin-bottom: 18px;
+    padding: 14px;
+    border-radius: 20px;
   }
 
   .saved-card {
@@ -801,20 +888,76 @@ button {
     grid-template-columns: 1fr 1fr;
   }
 
+  .player-field input,
+  .individual-toolbar select {
+    min-height: 52px;
+    font-size: 1rem;
+  }
+
+  .groups-grid,
+  .days-list {
+    gap: 14px;
+  }
+
+  .group-card,
+  .day-card {
+    border-radius: 20px;
+  }
+
+  .group-title,
+  .day-title {
+    padding: 14px 16px;
+  }
+
+  .group-title h3,
+  .day-title h3 {
+    font-size: 1.06rem;
+  }
+
   .match-row {
     grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
   }
 
   .result-row {
     grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .match-meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    font-size: 0.78rem;
+  }
+
+  .match-meta br {
+    display: none;
+  }
+
+  .team-name {
+    padding: 10px 12px;
+    text-align: center;
+    border-radius: 14px;
+    background: #f8f6ff;
   }
 
   .team-name.home-team {
-    text-align: left;
+    text-align: center;
   }
 
   .score-box {
     justify-content: center;
+    padding: 6px 0;
+  }
+
+  .score-input {
+    width: 64px;
+    height: 52px;
+    font-size: 1.12rem;
   }
 
   .result-status {
@@ -822,7 +965,110 @@ button {
     text-align: center;
   }
 
+  .save-bar {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    margin: 0;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  #form-message,
+  #results-message {
+    text-align: center;
+    font-size: 0.88rem;
+  }
+
   .tabs {
     flex-direction: column;
+  }
+
+  .tab-button {
+    min-height: 46px;
+  }
+
+  .ranking-actions {
+    justify-content: stretch;
+  }
+
+  .ranking-summary,
+  .individual-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .summary-card,
+  .individual-score-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .summary-card strong,
+  .individual-score-card strong {
+    font-size: 1.55rem;
+  }
+
+  .ranking-card {
+    gap: 10px;
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .rank-position {
+    font-size: 1rem;
+  }
+
+  .ranking-player strong {
+    font-size: 1.1rem;
+  }
+
+  .ranking-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ranking-stats span {
+    text-align: center;
+  }
+
+  .ranking-points {
+    font-size: 1.35rem;
+  }
+
+  .individual-toolbar {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .score-detail-card {
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .score-comparison {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 14px;
+    background: #f8f6ff;
+  }
+
+  .score-type {
+    min-width: 0;
+  }
+
+  .ranking-image-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .toast {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    max-width: none;
+    text-align: center;
   }
 }

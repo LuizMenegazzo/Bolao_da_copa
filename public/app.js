@@ -784,9 +784,8 @@ function drawRankingImageHeader(context, width, scoredMatches) {
   context.fillStyle = "rgba(255,255,255,0.82)";
   context.fillText("Copa UFSM Cachoeira do Sul", width / 2, 165);
 
-  drawRankingImagePill(context, 100, 220, 250, 80, "🏟️", `${scoredMatches.length} jogos`);
-  drawRankingImagePill(context, 415, 220, 250, 80, "🎟️", `${rankingEntries.length} cartelas`);
-  drawRankingImagePill(context, 730, 220, 250, 80, "🔥", `${rankingEntries[0]?.total ?? 0} pts`);
+  drawRankingImagePill(context, 220, 220, 285, 80, "🏟️", `${scoredMatches.length} jogos`);
+  drawRankingImagePill(context, 575, 220, 285, 80, "🎟️", `${rankingEntries.length} cartelas`);
 }
 
 function drawRankingImagePill(context, x, y, width, height, emoji, text) {
