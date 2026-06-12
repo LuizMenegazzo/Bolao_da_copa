@@ -398,10 +398,19 @@ button {
 }
 
 .team-flag {
-  width: 1.35em;
+  width: 24px;
+  height: 16px;
   flex: 0 0 auto;
-  text-align: center;
+  overflow: hidden;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #eef0f7;
+  box-shadow: 0 0 0 1px rgba(47, 28, 110, 0.12);
   filter: drop-shadow(0 1px 1px rgba(47, 28, 110, 0.12));
+}
+
+.team-flag-fallback {
+  display: inline-block;
 }
 
 .match-title-versus {

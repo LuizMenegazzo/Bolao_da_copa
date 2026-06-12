@@ -88,6 +88,57 @@ const TEAM_FLAGS = {
   "Uzbequistão": "🇺🇿"
 };
 
+const TEAM_FLAG_CODES = {
+  "AFRICA DO SUL": "za",
+  "ALEMANHA": "de",
+  "ARGENTINA": "ar",
+  "ARGELIA": "dz",
+  "ARABIA SAUDITA": "sa",
+  "AUSTRALIA": "au",
+  "AUSTRIA": "at",
+  "BELGICA": "be",
+  "BOSNIA": "ba",
+  "BRASIL": "br",
+  "CABO VERDE": "cv",
+  "CANADA": "ca",
+  "CATAR": "qa",
+  "COLOMBIA": "co",
+  "COREIA DO SUL": "kr",
+  "COSTA DO MARFIM": "ci",
+  "CROACIA": "hr",
+  "CURACAO": "cw",
+  "EGITO": "eg",
+  "EQUADOR": "ec",
+  "ESCOCIA": "gb-sct",
+  "ESPANHA": "es",
+  "ESTADOS UNIDOS": "us",
+  "FRANCA": "fr",
+  "GANA": "gh",
+  "HAITI": "ht",
+  "HOLANDA": "nl",
+  "INGLATERRA": "gb-eng",
+  "IRA": "ir",
+  "IRAQUE": "iq",
+  "JAPAO": "jp",
+  "JORDANIA": "jo",
+  "MARROCOS": "ma",
+  "MEXICO": "mx",
+  "NORUEGA": "no",
+  "NOVA ZELANDIA": "nz",
+  "PANAMA": "pa",
+  "PARAGUAI": "py",
+  "PORTUGAL": "pt",
+  "RD CONGO": "cd",
+  "REPUBLICA TCHECA": "cz",
+  "SENEGAL": "sn",
+  "SUECIA": "se",
+  "SUICA": "ch",
+  "TUNISIA": "tn",
+  "TURQUIA": "tr",
+  "URUGUAI": "uy",
+  "UZBEQUISTAO": "uz"
+};
+
 let groups = [];
 let cartelas = [];
 let results = {};
@@ -421,13 +472,13 @@ function renderMatch(match) {
         ${match.dateLabel}<br />
         ${match.dayName}
       </div>
-      <div class="team-name home-team">${formatTeamName(match.home)}</div>
+      <div class="team-name home-team">${formatTeamNameImage(match.home)}</div>
       <div class="score-box">
         <input class="score-input" type="number" inputmode="numeric" min="0" max="99" required aria-label="Gols de ${match.home}" data-match-id="${match.id}" data-side="homeScore" />
         <span class="versus">x</span>
         <input class="score-input" type="number" inputmode="numeric" min="0" max="99" required aria-label="Gols de ${match.away}" data-match-id="${match.id}" data-side="awayScore" />
       </div>
-      <div class="team-name">${formatTeamName(match.away)}</div>
+      <div class="team-name">${formatTeamNameImage(match.away)}</div>
     </div>
   `;
 }
@@ -465,13 +516,13 @@ function renderResultMatch(match) {
         <strong>${match.time}</strong><br />
         Grupo ${match.group}
       </div>
-      <div class="team-name home-team">${formatTeamName(match.home)}</div>
+      <div class="team-name home-team">${formatTeamNameImage(match.home)}</div>
       <div class="score-box">
         <input class="score-input result-input" type="number" inputmode="numeric" min="0" max="99" aria-label="Gols de ${match.home}" data-match-id="${match.id}" data-side="homeScore" value="${hasResult ? result.homeScore : ""}" />
         <span class="versus">x</span>
         <input class="score-input result-input" type="number" inputmode="numeric" min="0" max="99" aria-label="Gols de ${match.away}" data-match-id="${match.id}" data-side="awayScore" value="${hasResult ? result.awayScore : ""}" />
       </div>
-      <div class="team-name">${formatTeamName(match.away)}</div>
+      <div class="team-name">${formatTeamNameImage(match.away)}</div>
       <div class="result-status ${hasResult ? "saved" : ""}">${hasResult ? "Salvo" : "Pendente"}</div>
     </div>
   `;
@@ -734,9 +785,9 @@ function renderUpcomingPredictions(upcomingPredictions) {
             <span>${match.dayName} • ${match.time} • Grupo ${match.group}</span>
           </div>
           <div class="upcoming-match-teams">
-            <span>${formatTeamName(match.home)}</span>
+            <span>${formatTeamNameImage(match.home)}</span>
             <strong>x</strong>
-            <span>${formatTeamName(match.away)}</span>
+            <span>${formatTeamNameImage(match.away)}</span>
           </div>
           <div class="upcoming-prediction-score">
             <span>Palpite</span>
@@ -1292,7 +1343,30 @@ function formatPrediction(prediction) {
 }
 
 function formatMatchTitle(match) {
-  return `${formatTeamName(match.home)} <span class="match-title-versus">x</span> ${formatTeamName(match.away)}`;
+  return `${formatTeamNameImage(match.home)} <span class="match-title-versus">x</span> ${formatTeamNameImage(match.away)}`;
+}
+
+function formatTeamNameImage(teamName) {
+  const teamKey = getTeamKey(teamName);
+  const flagCode = TEAM_FLAG_CODES[teamKey];
+  const safeTeamName = escapeHtml(teamName);
+  const flag = flagCode
+    ? `<img class="team-flag" src="https://flagcdn.com/w40/${flagCode}.png" srcset="https://flagcdn.com/w80/${flagCode}.png 2x" alt="Bandeira: ${safeTeamName}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />`
+    : '<span class="team-flag team-flag-fallback" aria-hidden="true"></span>';
+
+  return `
+    <span class="team-with-flag">
+      ${flag}
+      <span>${safeTeamName}</span>
+    </span>
+  `;
+}
+
+function getTeamKey(teamName) {
+  return String(teamName)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
 }
 
 function formatTeamName(teamName) {
