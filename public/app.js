@@ -2,6 +2,7 @@ const homeScreen = document.querySelector("#home-screen");
 const addCardScreen = document.querySelector("#add-card-screen");
 const updateScoresScreen = document.querySelector("#update-scores-screen");
 const followPoolScreen = document.querySelector("#follow-pool-screen");
+const myCardScreen = document.querySelector("#my-card-screen");
 const matchesContainer = document.querySelector("#matches-container");
 const resultsContainer = document.querySelector("#results-container");
 const cartelaForm = document.querySelector("#cartela-form");
@@ -23,6 +24,8 @@ const rankingTab = document.querySelector("#ranking-tab");
 const individualTab = document.querySelector("#individual-tab");
 const generateRankingImageButton = document.querySelector("#generate-ranking-image");
 const rankingImageOutput = document.querySelector("#ranking-image-output");
+const personalCardsGrid = document.querySelector("#personal-cards-grid");
+const personalCardDetails = document.querySelector("#personal-card-details");
 
 const ADMIN_PASSWORD_KEY = "bolaoAdminPassword";
 
@@ -39,6 +42,7 @@ let cartelas = [];
 let results = {};
 let editingCartelaId = null;
 let rankingEntries = [];
+let personalEntries = [];
 
 document.querySelector('[data-screen="add-card"]').addEventListener("click", async () => {
   showScreen(addCardScreen);
@@ -65,6 +69,11 @@ document.querySelector('[data-screen="update-scores"]').addEventListener("click"
   await loadResults();
 });
 
+document.querySelector('[data-screen="my-card"]').addEventListener("click", async () => {
+  showScreen(myCardScreen);
+  await loadPersonalCardsData();
+});
+
 document.querySelector('[data-screen="follow-pool"]').addEventListener("click", async () => {
   showScreen(followPoolScreen);
   await loadFollowData();
@@ -82,6 +91,20 @@ document.querySelector("#back-home-scores").addEventListener("click", () => {
 
 document.querySelector("#back-home-follow").addEventListener("click", () => {
   showScreen(homeScreen);
+});
+
+document.querySelector("#back-home-my-card").addEventListener("click", () => {
+  showScreen(homeScreen);
+});
+
+personalCardsGrid.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-personal-cartela-id]");
+
+  if (!button) {
+    return;
+  }
+
+  renderPersonalCardDetails(button.dataset.personalCartelaId);
 });
 
 document.querySelectorAll("[data-follow-tab]").forEach((button) => {
@@ -278,6 +301,27 @@ async function loadFollowData() {
 
   await Promise.all([fetchCartelas(), fetchResults()]);
   renderFollowDashboard();
+}
+
+async function loadPersonalCardsData() {
+  personalCardsGrid.innerHTML = '<p class="empty-state">Carregando cartelas...</p>';
+  personalCardDetails.innerHTML = "";
+
+  if (!groups.length) {
+    await loadMatches();
+  }
+
+  try {
+    await Promise.all([fetchCartelas(), fetchResults()]);
+    personalEntries = calculateRanking(getScoredMatches());
+    renderPersonalCardsGrid();
+
+    if (personalEntries.length) {
+      renderPersonalCardDetails(personalEntries[0].id);
+    }
+  } catch (error) {
+    personalCardsGrid.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
 }
 
 async function fetchCartelas() {
@@ -520,6 +564,139 @@ function renderIndividualCartela(cartelaId) {
   `).join("");
 }
 
+function renderPersonalCardsGrid() {
+  if (!personalEntries.length) {
+    personalCardsGrid.innerHTML = '<p class="empty-state">Ainda não há cartelas cadastradas para acompanhar.</p>';
+    personalCardDetails.innerHTML = "";
+    return;
+  }
+
+  personalCardsGrid.innerHTML = personalEntries.map((entry, index) => `
+    <button class="personal-card-button ${index === 0 ? "active" : ""}" type="button" data-personal-cartela-id="${entry.id}">
+      <span class="personal-card-rank">${entry.rank}º</span>
+      <strong>${escapeHtml(entry.playerName)}</strong>
+      <small>${entry.total} pts • ${entry.played} jogos avaliados</small>
+    </button>
+  `).join("");
+}
+
+function renderPersonalCardDetails(cartelaId) {
+  const entry = personalEntries.find((personalEntry) => personalEntry.id === cartelaId) || personalEntries[0];
+
+  if (!entry) {
+    personalCardDetails.innerHTML = '<p class="empty-state">Escolha uma cartela para ver os detalhes.</p>';
+    return;
+  }
+
+  const cartela = cartelas.find((savedCartela) => savedCartela.id === entry.id);
+  const upcomingMatches = getUpcomingMatches();
+  const upcomingPredictions = upcomingMatches.map((match) => ({
+    match,
+    prediction: cartela?.predictions?.[match.id]
+  }));
+
+  personalCardsGrid.querySelectorAll(".personal-card-button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.personalCartelaId === entry.id);
+  });
+
+  personalCardDetails.innerHTML = `
+    <section class="personal-hero-card">
+      <div>
+        <p class="eyebrow">Cartela selecionada</p>
+        <h3>${escapeHtml(entry.playerName)}</h3>
+        <p>${entry.rank}º lugar na classificação geral</p>
+      </div>
+      <div class="personal-total">${entry.total}<small>pts</small></div>
+    </section>
+
+    <div class="individual-summary personal-summary">
+      <article class="individual-score-card highlight">
+        <span>Pontos feitos</span>
+        <strong>${entry.total} pts</strong>
+      </article>
+      <article class="individual-score-card">
+        <span>Jogos avaliados</span>
+        <strong>${entry.played}</strong>
+      </article>
+      <article class="individual-score-card">
+        <span>Próximos palpites</span>
+        <strong>${upcomingPredictions.length}</strong>
+      </article>
+    </div>
+
+    <section class="personal-section">
+      <div class="personal-section-title">
+        <h3>Jogos que já pontuaram</h3>
+        <span>${entry.details.length} jogos</span>
+      </div>
+      ${renderPersonalScoredMatches(entry)}
+    </section>
+
+    <section class="personal-section">
+      <div class="personal-section-title">
+        <h3>Próximos jogos e palpites</h3>
+        <span>${upcomingPredictions.length} jogos</span>
+      </div>
+      ${renderUpcomingPredictions(upcomingPredictions)}
+    </section>
+  `;
+}
+
+function renderPersonalScoredMatches(entry) {
+  if (!entry.details.length) {
+    return '<p class="empty-state">Ainda não há resultados oficiais para pontuar esta cartela.</p>';
+  }
+
+  return `
+    <div class="individual-details">
+      ${entry.details.map((detail) => `
+        <article class="score-detail-card ${detail.type}">
+          <div class="score-detail-main">
+            <strong>${detail.match.home} x ${detail.match.away}</strong>
+            <span>${detail.match.dateLabel} • ${detail.match.time} • Grupo ${detail.match.group}</span>
+          </div>
+          <div class="score-comparison">
+            <span>Palpite: ${detail.prediction.homeScore}x${detail.prediction.awayScore}</span>
+            <span>Resultado: ${detail.result.homeScore}x${detail.result.awayScore}</span>
+          </div>
+          <div class="score-type">
+            <span>${SCORE_LABELS[detail.type]}</span>
+            <strong>${detail.points > 0 ? "+" : ""}${detail.points}</strong>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderUpcomingPredictions(upcomingPredictions) {
+  if (!upcomingPredictions.length) {
+    return '<p class="empty-state">Todos os jogos já têm resultado informado.</p>';
+  }
+
+  return `
+    <div class="upcoming-predictions">
+      ${upcomingPredictions.map(({ match, prediction }) => `
+        <article class="upcoming-prediction-card">
+          <div class="upcoming-match-meta">
+            <strong>${match.dateLabel}</strong>
+            <span>${match.dayName} • ${match.time} • Grupo ${match.group}</span>
+          </div>
+          <div class="upcoming-match-teams">
+            <span>${match.home}</span>
+            <strong>x</strong>
+            <span>${match.away}</span>
+          </div>
+          <div class="upcoming-prediction-score">
+            <span>Palpite</span>
+            <strong>${formatPrediction(prediction)}</strong>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
 function calculateRanking(scoredMatches) {
   const entries = cartelas.map((cartela) => scoreCartela(cartela, scoredMatches));
   entries.sort((firstEntry, secondEntry) => {
@@ -621,6 +798,13 @@ function getScoredMatches() {
   return getChronologicalMatches().filter((match) => {
     const result = results[match.id];
     return Number.isInteger(result?.homeScore) && Number.isInteger(result?.awayScore);
+  });
+}
+
+function getUpcomingMatches() {
+  return getChronologicalMatches().filter((match) => {
+    const result = results[match.id];
+    return !(Number.isInteger(result?.homeScore) && Number.isInteger(result?.awayScore));
   });
 }
 
@@ -967,6 +1151,7 @@ function showScreen(screen) {
   addCardScreen.classList.toggle("hidden", screen !== addCardScreen);
   updateScoresScreen.classList.toggle("hidden", screen !== updateScoresScreen);
   followPoolScreen.classList.toggle("hidden", screen !== followPoolScreen);
+  myCardScreen.classList.toggle("hidden", screen !== myCardScreen);
 }
 
 function getChronologicalMatches() {
@@ -1045,6 +1230,14 @@ function formatDate(value) {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatPrediction(prediction) {
+  if (!prediction || !Number.isInteger(Number(prediction.homeScore)) || !Number.isInteger(Number(prediction.awayScore))) {
+    return "Sem palpite";
+  }
+
+  return `${prediction.homeScore}x${prediction.awayScore}`;
 }
 
 function escapeHtml(value) {

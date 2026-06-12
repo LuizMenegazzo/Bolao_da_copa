@@ -18,9 +18,9 @@
       </section>
 
       <section id="home-screen" class="panel home-panel">
-        <button class="main-action" type="button" data-screen="add-card">
-          <span>Adicionar cartela</span>
-          <small>Preencher nome e palpites da fase de grupos</small>
+        <button class="main-action" type="button" data-screen="my-card">
+          <span>Acompanhar sua cartela</span>
+          <small>Ver pontos feitos, jogos avaliados e próximos palpites</small>
         </button>
         <button class="main-action secondary-action" type="button" data-screen="follow-pool">
           <span>Acompanhar bolão</span>
@@ -29,6 +29,10 @@
         <button class="main-action secondary-action" type="button" data-screen="update-scores">
           <span>Atualizar placares</span>
           <small>Informar resultados oficiais jogo a jogo</small>
+        </button>
+        <button class="main-action secondary-action" type="button" data-screen="add-card">
+          <span>Editar/adicionar cartelas</span>
+          <small>Cadastrar novas cartelas ou corrigir palpites</small>
         </button>
       </section>
 
@@ -124,6 +128,20 @@
           <div id="individual-summary" class="individual-summary"></div>
           <div id="individual-details" class="individual-details"></div>
         </section>
+      </section>
+
+      <section id="my-card-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Acompanhar sua cartela</p>
+            <h2>Escolha uma cartela</h2>
+            <p>Veja sua pontuação atual, os jogos que já contaram e seus palpites dos próximos jogos.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-home-my-card">Voltar</button>
+        </div>
+
+        <div id="personal-cards-grid" class="personal-cards-grid"></div>
+        <div id="personal-card-details" class="personal-card-details"></div>
       </section>
 
       <div id="toast" class="toast hidden" role="status"></div>
