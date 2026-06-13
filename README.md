@@ -84,6 +84,24 @@ ADMIN_PASSWORD=popo
 DATABASE_URL=<url do banco postgres>
 ```
 
+### Sincronizacao automatica de placares
+
+O servidor sincroniza resultados com a OpenLigaDB ao iniciar, ao consultar `GET /api/results` quando a ultima busca esta velha, e a cada intervalo enquanto o Render estiver acordado.
+
+Variaveis opcionais:
+
+```text
+AUTO_SCORE_SYNC=true
+AUTO_SCORE_SYNC_MINUTES=10
+AUTO_SYNC_LIVE_SCORES=true
+OPENLIGADB_URL=https://api.openligadb.de/getmatchdata/wm26/2026
+```
+
+- `AUTO_SCORE_SYNC=false`: desliga a sincronizacao automatica.
+- `AUTO_SCORE_SYNC_MINUTES=5`: muda o intervalo para 5 minutos.
+- `AUTO_SYNC_LIVE_SCORES=false`: salva apenas placares de jogos finalizados.
+- `OPENLIGADB_URL`: troca a URL da API, caso o atalho da liga mude.
+
 ## Critérios de pontuação
 
 - Acerto completo: `10 pontos` quando acerta exatamente o placar.
@@ -100,4 +118,6 @@ DATABASE_URL=<url do banco postgres>
 - `PUT /api/cartelas/:id`: atualiza uma cartela salva.
 - `DELETE /api/cartelas/:id`: exclui uma cartela salva.
 - `GET /api/results`: lista os resultados oficiais salvos.
+- `GET /api/sync/status`: mostra o status da sincronizacao automatica.
+- `POST /api/results/sync`: forca sincronizacao automatica, usando senha de administrador.
 - `PUT /api/results`: salva resultados oficiais de forma parcial.

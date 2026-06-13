@@ -26,6 +26,8 @@ const generateRankingImageButton = document.querySelector("#generate-ranking-ima
 const rankingImageOutput = document.querySelector("#ranking-image-output");
 const personalCardsGrid = document.querySelector("#personal-cards-grid");
 const personalCardDetails = document.querySelector("#personal-card-details");
+const syncResultsButton = document.querySelector("#sync-results-button");
+const scoreSyncStatusElements = document.querySelectorAll(".score-sync-status");
 
 const ADMIN_PASSWORD_KEY = "bolaoAdminPassword";
 
@@ -168,6 +170,7 @@ let results = {};
 let editingCartelaId = null;
 let rankingEntries = [];
 let personalEntries = [];
+let scoreSyncStatus = null;
 
 document.querySelector('[data-screen="add-card"]').addEventListener("click", async () => {
   showScreen(addCardScreen);
@@ -244,6 +247,14 @@ cartelaSelect.addEventListener("change", () => {
 
 generateRankingImageButton.addEventListener("click", () => {
   generateRankingImage();
+});
+
+syncResultsButton?.addEventListener("click", async () => {
+  if (!(await requireAdminPassword())) {
+    return;
+  }
+
+  await syncResultsNow();
 });
 
 newCardButton.addEventListener("click", () => {
@@ -407,6 +418,8 @@ async function loadResults() {
     }
 
     results = data.results;
+    scoreSyncStatus = data.sync || null;
+    renderScoreSyncStatus();
     renderResultsByDay();
   } catch (error) {
     resultsContainer.innerHTML = "";
@@ -469,6 +482,41 @@ async function fetchResults() {
   }
 
   results = data.results;
+  scoreSyncStatus = data.sync || null;
+  renderScoreSyncStatus();
+}
+
+async function syncResultsNow() {
+  setResultsMessage("Sincronizando placares automáticos...");
+  syncResultsButton.disabled = true;
+  syncResultsButton.textContent = "Sincronizando...";
+
+  try {
+    const response = await fetch("/api/results/sync", {
+      method: "POST",
+      headers: getAdminHeaders()
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAdminPassword();
+      }
+
+      throw new Error(data.error || "Não foi possível sincronizar os placares.");
+    }
+
+    results = data.results;
+    scoreSyncStatus = data.sync || null;
+    renderScoreSyncStatus();
+    renderResultsByDay();
+    setResultsMessage("Sincronização concluída!", "success");
+  } catch (error) {
+    setResultsMessage(error.message, "error");
+  } finally {
+    syncResultsButton.disabled = false;
+    syncResultsButton.textContent = "Sincronizar agora";
+  }
 }
 
 function renderMatches(groupList) {
@@ -1343,6 +1391,48 @@ function setMessage(message, type = "") {
 function setResultsMessage(message, type = "") {
   resultsMessage.textContent = message;
   resultsMessage.className = type;
+}
+
+function renderScoreSyncStatus() {
+  if (!scoreSyncStatusElements.length) {
+    return;
+  }
+
+  const text = getScoreSyncStatusText();
+
+  scoreSyncStatusElements.forEach((element) => {
+    element.textContent = text;
+    element.classList.toggle("error", Boolean(scoreSyncStatus?.lastError));
+  });
+}
+
+function getScoreSyncStatusText() {
+  if (!scoreSyncStatus) {
+    return "Sincronização automática: status ainda não carregado.";
+  }
+
+  if (!scoreSyncStatus.enabled) {
+    return "Sincronização automática: desligada.";
+  }
+
+  if (scoreSyncStatus.syncing) {
+    return "Sincronização automática: buscando placares agora...";
+  }
+
+  if (scoreSyncStatus.lastError) {
+    return `Sincronização automática: falhou na última tentativa (${scoreSyncStatus.lastError}).`;
+  }
+
+  if (scoreSyncStatus.lastSuccessAt) {
+    const date = new Date(scoreSyncStatus.lastSuccessAt);
+    const formattedDate = Number.isNaN(date.getTime())
+      ? scoreSyncStatus.lastSuccessAt
+      : date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+    return `Sincronização automática: última busca em ${formattedDate}. ${scoreSyncStatus.lastUpdatedCount || 0} placares atualizados.`;
+  }
+
+  return "Sincronização automática: aguardando primeira busca.";
 }
 
 function showToast(message) {

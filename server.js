@@ -3,6 +3,7 @@ const http = require("http");
 const path = require("path");
 const { randomUUID } = require("crypto");
 const storage = require("./storage");
+const { createScoreSync } = require("./score-sync");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -14,6 +15,7 @@ const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
   ".svg": "image/svg+xml"
 };
 
@@ -43,6 +45,8 @@ function loadGroups() {
 function getAllMatches() {
   return loadGroups().flatMap((group) => group.matches.map((match) => ({ ...match, group: group.group })));
 }
+
+const scoreSync = createScoreSync({ storage, getAllMatches });
 
 function readRequestBody(request) {
   return new Promise((resolve, reject) => {
@@ -177,7 +181,34 @@ async function handleApiRequest(request, response, pathname) {
     }
 
     if (request.method === "GET" && pathname === "/api/results") {
-      sendJson(response, 200, { results: await storage.getResults() });
+      try {
+        await scoreSync.syncIfStale("api-results");
+      } catch (error) {
+        console.warn("NÃ£o foi possÃ­vel sincronizar placares automaticamente.", error.message);
+      }
+
+      sendJson(response, 200, { results: await storage.getResults(), sync: scoreSync.getStatus() });
+      return;
+    }
+
+    if (request.method === "GET" && pathname === "/api/sync/status") {
+      sendJson(response, 200, { sync: scoreSync.getStatus() });
+      return;
+    }
+
+    if (request.method === "POST" && pathname === "/api/results/sync") {
+      if (!requireAdmin(request, response)) {
+        return;
+      }
+
+      try {
+        await scoreSync.syncNow("manual");
+      } catch (error) {
+        sendJson(response, 502, { error: error.message, sync: scoreSync.getStatus() });
+        return;
+      }
+
+      sendJson(response, 200, { results: await storage.getResults(), sync: scoreSync.getStatus() });
       return;
     }
 
@@ -290,6 +321,8 @@ const server = http.createServer((request, response) => {
 });
 
 storage.initStorage().then(() => {
+  scoreSync.start();
+
   server.listen(PORT, () => {
     console.log(`Bolão UFSM-CS rodando em http://localhost:${PORT}`);
   });
