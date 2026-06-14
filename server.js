@@ -163,6 +163,12 @@ function serveStaticFile(response, pathname) {
     const extension = path.extname(filePath);
     response.writeHead(200, { "Content-Type": contentTypes[extension] || "application/octet-stream" });
     response.end(content);
+
+    if (requestedPath === "/index.html") {
+      scoreSync.syncNow("page-load").catch((error) => {
+        console.warn("NÃ£o foi possÃ­vel sincronizar placares ao carregar a pÃ¡gina.", error.message);
+      });
+    }
   });
 }
 
@@ -182,7 +188,7 @@ async function handleApiRequest(request, response, pathname) {
 
     if (request.method === "GET" && pathname === "/api/results") {
       try {
-        await scoreSync.syncIfStale("api-results");
+        await scoreSync.syncOnDemand("api-results");
       } catch (error) {
         console.warn("NÃ£o foi possÃ­vel sincronizar placares automaticamente.", error.message);
       }
@@ -321,8 +327,6 @@ const server = http.createServer((request, response) => {
 });
 
 storage.initStorage().then(() => {
-  scoreSync.start();
-
   server.listen(PORT, () => {
     console.log(`Bolão UFSM-CS rodando em http://localhost:${PORT}`);
   });

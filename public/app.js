@@ -1408,19 +1408,19 @@ function renderScoreSyncStatus() {
 
 function getScoreSyncStatusText() {
   if (!scoreSyncStatus) {
-    return "Sincronização automática: status ainda não carregado.";
+    return "Sincronização de placares: status ainda não carregado.";
   }
 
   if (!scoreSyncStatus.enabled) {
-    return "Sincronização automática: desligada.";
+    return "Sincronização de placares: desligada.";
   }
 
   if (scoreSyncStatus.syncing) {
-    return "Sincronização automática: buscando placares agora...";
+    return "Sincronização de placares: buscando placares agora...";
   }
 
   if (scoreSyncStatus.lastError) {
-    return `Sincronização automática: falhou na última tentativa (${scoreSyncStatus.lastError}).`;
+    return `Sincronização de placares: falhou na última tentativa (${scoreSyncStatus.lastError}).`;
   }
 
   if (scoreSyncStatus.lastSuccessAt) {
@@ -1429,10 +1429,10 @@ function getScoreSyncStatusText() {
       ? scoreSyncStatus.lastSuccessAt
       : date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
-    return `Sincronização automática: última busca em ${formattedDate}. ${scoreSyncStatus.lastUpdatedCount || 0} placares atualizados.`;
+    return `Sincronização de placares: última busca em ${formattedDate}. ${scoreSyncStatus.lastUpdatedCount || 0} placares atualizados.`;
   }
 
-  return "Sincronização automática: aguardando primeira busca.";
+  return "Sincronização de placares: aguardando primeira busca.";
 }
 
 function showToast(message) {

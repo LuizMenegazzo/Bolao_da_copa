@@ -1,5 +1,3 @@
-const DEFAULT_INTERVAL_MS = 10 * 60 * 1000;
-const MIN_INTERVAL_MS = 60 * 1000;
 const OPENLIGADB_URL = process.env.OPENLIGADB_URL || "https://api.openligadb.de/getmatchdata/wm26/2026";
 
 const TEAM_ALIASES = {
@@ -57,9 +55,7 @@ const TEAM_ALIASES = {
 function createScoreSync({ storage, getAllMatches }) {
   const enabled = process.env.AUTO_SCORE_SYNC !== "false";
   const syncLiveScores = process.env.AUTO_SYNC_LIVE_SCORES !== "false";
-  const intervalMs = getIntervalMs();
 
-  let timer = null;
   let currentSync = null;
   let lastAttemptAt = null;
   let lastSuccessAt = null;
@@ -74,7 +70,6 @@ function createScoreSync({ storage, getAllMatches }) {
       enabled,
       source: "OpenLigaDB",
       sourceUrl: OPENLIGADB_URL,
-      intervalMs,
       syncLiveScores,
       syncing: Boolean(currentSync),
       lastAttemptAt,
@@ -87,46 +82,13 @@ function createScoreSync({ storage, getAllMatches }) {
     };
   }
 
-  function start() {
-    if (!enabled || timer) {
-      return;
-    }
-
-    syncNow("startup").catch((error) => {
-      console.warn("Sincronização automática inicial falhou:", error.message);
-    });
-
-    timer = setInterval(() => {
-      syncNow("interval").catch((error) => {
-        console.warn("Sincronização automática falhou:", error.message);
-      });
-    }, intervalMs);
-
-    if (typeof timer.unref === "function") {
-      timer.unref();
-    }
-  }
-
-  function stop() {
-    if (!timer) {
-      return;
-    }
-
-    clearInterval(timer);
-    timer = null;
-  }
-
-  async function syncIfStale(reason = "api") {
+  async function syncOnDemand(reason = "api") {
     if (!enabled) {
       return getStatus();
     }
 
     if (currentSync) {
       await currentSync;
-      return getStatus();
-    }
-
-    if (lastAttemptAt && Date.now() - new Date(lastAttemptAt).getTime() < intervalMs) {
       return getStatus();
     }
 
@@ -302,9 +264,7 @@ function createScoreSync({ storage, getAllMatches }) {
 
   return {
     getStatus,
-    start,
-    stop,
-    syncIfStale,
+    syncOnDemand,
     syncNow
   };
 }
@@ -344,18 +304,6 @@ function normalizeName(value) {
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase();
-}
-
-function getIntervalMs() {
-  const minutes = Number(process.env.AUTO_SCORE_SYNC_MINUTES);
-  const milliseconds = Number(process.env.AUTO_SCORE_SYNC_INTERVAL_MS);
-  const configuredInterval = Number.isFinite(milliseconds) && milliseconds > 0
-    ? milliseconds
-    : Number.isFinite(minutes) && minutes > 0
-      ? minutes * 60 * 1000
-      : DEFAULT_INTERVAL_MS;
-
-  return Math.max(configuredInterval, MIN_INTERVAL_MS);
 }
 
 module.exports = {
