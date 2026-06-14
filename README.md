@@ -86,7 +86,7 @@ DATABASE_URL=<url do banco postgres>
 
 ### Sincronizacao de placares
 
-O servidor sincroniza resultados com a OpenLigaDB sob demanda:
+O servidor sincroniza resultados com a ESPN sob demanda:
 
 - quando alguem abre/recarrega o site;
 - quando alguem entra em `Acompanhar sua cartela`;
@@ -100,12 +100,12 @@ Variaveis opcionais:
 ```text
 AUTO_SCORE_SYNC=true
 AUTO_SYNC_LIVE_SCORES=true
-OPENLIGADB_URL=https://api.openligadb.de/getmatchdata/wm26/2026
+ESPN_SCOREBOARD_URL=https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
 ```
 
-- `AUTO_SCORE_SYNC=false`: desliga a sincronizacao com a OpenLigaDB.
+- `AUTO_SCORE_SYNC=false`: desliga a sincronizacao com a ESPN.
 - `AUTO_SYNC_LIVE_SCORES=false`: salva apenas placares de jogos finalizados.
-- `OPENLIGADB_URL`: troca a URL da API, caso o atalho da liga mude.
+- `ESPN_SCOREBOARD_URL`: troca a URL da API, caso a ESPN mude o endpoint.
 
 ## Critérios de pontuação
 

@@ -1,55 +1,57 @@
-const OPENLIGADB_URL = process.env.OPENLIGADB_URL || "https://api.openligadb.de/getmatchdata/wm26/2026";
+const ESPN_SCOREBOARD_BASE_URL =
+  process.env.ESPN_SCOREBOARD_URL ||
+  "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 
 const TEAM_ALIASES = {
-  "África do Sul": ["south africa", "südafrika", "suedafrika"],
-  "Alemanha": ["germany", "deutschland"],
-  "Argentina": [],
-  "Argélia": ["algeria", "algerien"],
-  "Arábia Saudita": ["saudi arabia", "saudi-arabien", "saudi arabien"],
-  "Austrália": ["australia", "australien"],
-  "Áustria": ["austria", "österreich", "oesterreich"],
-  "Bélgica": ["belgium", "belgien"],
-  "Bósnia": ["bosnia", "bosnia and herzegovina", "bosnien", "bosnien-herzegowina"],
-  "Brasil": ["brazil", "brasilien"],
-  "BRASIL": ["brazil", "brasilien"],
-  "Cabo Verde": ["cape verde", "kap verde"],
-  "Canadá": ["canada", "kanada"],
-  "Catar": ["qatar", "katar"],
-  "Colômbia": ["colombia", "kolumbien"],
-  "Coreia do Sul": ["south korea", "korea republic", "republik korea", "südkorea", "suedkorea"],
-  "Costa do Marfim": ["ivory coast", "cote d'ivoire", "côte d’ivoire", "elfenbeinküste", "elfenbeinkueste"],
-  "Croácia": ["croatia", "kroatien"],
-  "Curaçao": ["curacao"],
-  "Egito": ["egypt", "ägypten", "aegypten"],
-  "Equador": ["ecuador"],
-  "Escócia": ["scotland", "schottland"],
-  "Espanha": ["spain", "spanien"],
-  "Estados Unidos": ["usa", "united states", "united states of america", "vereinigte staaten"],
-  "França": ["france", "frankreich"],
-  "Gana": ["ghana"],
-  "Haiti": [],
-  "Holanda": ["netherlands", "niederlande", "holland"],
-  "Inglaterra": ["england"],
-  "Irã": ["iran"],
-  "Iraque": ["iraq", "irak"],
-  "Japão": ["japan"],
-  "Jordânia": ["jordan", "jordanien"],
-  "Marrocos": ["morocco", "marokko"],
-  "México": ["mexico", "mexiko"],
-  "Noruega": ["norway", "norwegen"],
-  "Nova Zelândia": ["new zealand", "neuseeland"],
-  "Panamá": ["panama"],
-  "Paraguai": ["paraguay"],
-  "Portugal": [],
-  "RD Congo": ["dr congo", "congo dr", "democratic republic of congo", "kongo dr", "dr kongo", "d.r. congo"],
-  "República Tcheca": ["czech republic", "czechia", "tschechien", "tschechische republik"],
-  "Senegal": [],
-  "Suécia": ["sweden", "schweden"],
-  "Suíça": ["switzerland", "schweiz"],
-  "Tunísia": ["tunisia", "tunesien"],
-  "Turquia": ["turkey", "türkei", "tuerkei"],
-  "Uruguai": ["uruguay"],
-  "Uzbequistão": ["uzbekistan", "usbekistan"]
+  "África do Sul": ["south africa", "rsa", "zaf", "sa"],
+  "Alemanha": ["germany", "deutschland", "ger", "deu"],
+  "Argentina": ["arg"],
+  "Argélia": ["algeria", "alg", "dza"],
+  "Arábia Saudita": ["saudi arabia", "ksa", "sau"],
+  "Austrália": ["australia", "aus"],
+  "Áustria": ["austria", "aut"],
+  "Bélgica": ["belgium", "bel", "belgien"],
+  "Bósnia": ["bosnia", "bosnia and herzegovina", "bosnia-herzegovina", "bih", "bos"],
+  "Brasil": ["brazil", "bra"],
+  "BRASIL": ["brazil", "bra"],
+  "Cabo Verde": ["cape verde", "cape verde islands", "cpv"],
+  "Canadá": ["canada", "can"],
+  "Catar": ["qatar", "qat"],
+  "Colômbia": ["colombia", "col"],
+  "Coreia do Sul": ["south korea", "korea republic", "korea", "kor"],
+  "Costa do Marfim": ["ivory coast", "cote d ivoire", "côte d'ivoire", "civ"],
+  "Croácia": ["croatia", "cro"],
+  "Curaçao": ["curacao", "curaçao", "cuw"],
+  "Egito": ["egypt", "egy"],
+  "Equador": ["ecuador", "ecu"],
+  "Escócia": ["scotland", "sco"],
+  "Espanha": ["spain", "esp"],
+  "Estados Unidos": ["usa", "united states", "united states of america", "usmnt"],
+  "França": ["france", "fra"],
+  "Gana": ["ghana", "gha"],
+  "Haiti": ["hai"],
+  "Holanda": ["netherlands", "holland", "ned", "nld"],
+  "Inglaterra": ["england", "eng"],
+  "Irã": ["iran", "irn"],
+  "Iraque": ["iraq", "irq"],
+  "Japão": ["japan", "jpn"],
+  "Jordânia": ["jordan", "jor"],
+  "Marrocos": ["morocco", "mar"],
+  "México": ["mexico", "mex"],
+  "Noruega": ["norway", "nor"],
+  "Nova Zelândia": ["new zealand", "nzl"],
+  "Panamá": ["panama", "pan"],
+  "Paraguai": ["paraguay", "par"],
+  "Portugal": ["por"],
+  "RD Congo": ["dr congo", "congo dr", "democratic republic of congo", "d r congo", "cod"],
+  "República Tcheca": ["czech republic", "czechia", "cze"],
+  "Senegal": ["sen"],
+  "Suécia": ["sweden", "swe"],
+  "Suíça": ["switzerland", "sui", "che"],
+  "Tunísia": ["tunisia", "tun"],
+  "Turquia": ["turkey", "tur", "türkiye"],
+  "Uruguai": ["uruguay", "uru"],
+  "Uzbequistão": ["uzbekistan", "uzb"]
 };
 
 function createScoreSync({ storage, getAllMatches }) {
@@ -68,8 +70,8 @@ function createScoreSync({ storage, getAllMatches }) {
   function getStatus() {
     return {
       enabled,
-      source: "OpenLigaDB",
-      sourceUrl: OPENLIGADB_URL,
+      source: "ESPN",
+      sourceUrl: ESPN_SCOREBOARD_BASE_URL,
       syncLiveScores,
       syncing: Boolean(currentSync),
       lastAttemptAt,
@@ -123,8 +125,8 @@ function createScoreSync({ storage, getAllMatches }) {
     lastAttemptAt = new Date().toISOString();
     lastError = null;
 
-    const sourceMatches = await fetchOpenLigaMatches();
     const localMatches = getAllMatches();
+    const sourceMatches = await fetchEspnMatches(localMatches);
     const currentResults = await storage.getResults();
     const resultsPatch = {};
 
@@ -173,41 +175,41 @@ function createScoreSync({ storage, getAllMatches }) {
 
     lastSuccessAt = new Date().toISOString();
     console.log(
-      `Sincronização ${reason}: ${lastUpdatedCount} placares atualizados, ${lastMatchedCount} jogos encontrados.`
+      `Sincronização ${reason} via ESPN: ${lastUpdatedCount} placares atualizados, ${lastMatchedCount} jogos encontrados.`
     );
 
     return getStatus();
   }
 
   function extractScore(sourceMatch) {
-    const results = Array.isArray(sourceMatch.matchResults) ? sourceMatch.matchResults : [];
+    const status = sourceMatch.status?.type || {};
+    const state = normalizeName(status.state);
+    const isCompleted = Boolean(status.completed) || state === "post";
+    const isLive = state === "in" || state === "live";
 
-    if (!results.length) {
+    if (!isCompleted && !isLive) {
       return null;
     }
 
-    if (!syncLiveScores && !sourceMatch.matchIsFinished) {
+    if (!syncLiveScores && !isCompleted) {
       return null;
     }
 
-    const finalResult = results.find((result) => Number(result.resultTypeID) === 2);
-    const selectedResult = finalResult || [...results].sort((firstResult, secondResult) => {
-      return Number(secondResult.resultOrder || 0) - Number(firstResult.resultOrder || 0);
-    })[0];
-
-    const homeScore = Number(selectedResult?.pointsTeam1);
-    const awayScore = Number(selectedResult?.pointsTeam2);
+    const homeTeam = getEspnCompetitor(sourceMatch, "home");
+    const awayTeam = getEspnCompetitor(sourceMatch, "away");
+    const homeScore = Number(homeTeam?.score);
+    const awayScore = Number(awayTeam?.score);
 
     if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore)) {
       return null;
     }
 
-    return { homeScore, awayScore, reversed: false };
+    return { homeScore, awayScore };
   }
 
   function findLocalMatch(sourceMatch, localMatches) {
-    const sourceHome = resolveTeamName(sourceMatch.team1);
-    const sourceAway = resolveTeamName(sourceMatch.team2);
+    const sourceHome = resolveTeamName(getEspnCompetitor(sourceMatch, "home")?.team);
+    const sourceAway = resolveTeamName(getEspnCompetitor(sourceMatch, "away")?.team);
 
     if (!sourceHome || !sourceAway) {
       return null;
@@ -232,31 +234,48 @@ function createScoreSync({ storage, getAllMatches }) {
     return reversedOrderMatch ? { match: reversedOrderMatch, scoreReversed: true } : null;
   }
 
-  async function fetchOpenLigaMatches() {
+  async function fetchEspnMatches(localMatches) {
     if (typeof fetch !== "function") {
       throw new Error("Fetch não está disponível nesta versão do Node.");
     }
 
+    const dates = [...new Set(localMatches.map((match) => match.date).filter(Boolean))]
+      .sort()
+      .map((date) => date.replace(/-/g, ""));
+    const matchLists = await Promise.all(dates.map(fetchEspnDate));
+    const matchesById = new Map();
+
+    for (const matches of matchLists) {
+      for (const match of matches) {
+        matchesById.set(String(match.id || match.uid || `${match.name}-${match.date}`), match);
+      }
+    }
+
+    return [...matchesById.values()];
+  }
+
+  async function fetchEspnDate(dateKey) {
+    const url = `${ESPN_SCOREBOARD_BASE_URL}?dates=${encodeURIComponent(dateKey)}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const response = await fetch(OPENLIGADB_URL, {
+      const response = await fetch(url, {
         headers: { "Accept": "application/json" },
         signal: controller.signal
       });
 
       if (!response.ok) {
-        throw new Error(`OpenLigaDB respondeu com HTTP ${response.status}.`);
+        throw new Error(`ESPN respondeu com HTTP ${response.status}.`);
       }
 
       const data = await response.json();
 
-      if (!Array.isArray(data)) {
-        throw new Error("OpenLigaDB retornou um formato inesperado.");
+      if (!Array.isArray(data.events)) {
+        throw new Error("ESPN retornou um formato inesperado.");
       }
 
-      return data;
+      return data.events;
     } finally {
       clearTimeout(timeout);
     }
@@ -269,8 +288,23 @@ function createScoreSync({ storage, getAllMatches }) {
   };
 }
 
+function getEspnCompetitor(sourceMatch, homeAway) {
+  const competitors = sourceMatch.competitions?.[0]?.competitors;
+
+  if (!Array.isArray(competitors)) {
+    return null;
+  }
+
+  return competitors.find((competitor) => competitor.homeAway === homeAway) || null;
+}
+
 function resolveTeamName(team) {
   const candidates = [
+    team?.displayName,
+    team?.shortDisplayName,
+    team?.name,
+    team?.location,
+    team?.abbreviation,
     team?.teamName,
     team?.shortName,
     team?.teamGroupName,

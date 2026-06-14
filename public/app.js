@@ -1407,6 +1407,8 @@ function renderScoreSyncStatus() {
 }
 
 function getScoreSyncStatusText() {
+  const sourceName = scoreSyncStatus?.source || "API";
+
   if (!scoreSyncStatus) {
     return "Sincronização de placares: status ainda não carregado.";
   }
@@ -1416,7 +1418,7 @@ function getScoreSyncStatusText() {
   }
 
   if (scoreSyncStatus.syncing) {
-    return "Sincronização de placares: buscando placares agora...";
+    return `Sincronização de placares: buscando placares na ${sourceName} agora...`;
   }
 
   if (scoreSyncStatus.lastError) {
@@ -1429,7 +1431,7 @@ function getScoreSyncStatusText() {
       ? scoreSyncStatus.lastSuccessAt
       : date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
-    return `Sincronização de placares: última busca em ${formattedDate}. ${scoreSyncStatus.lastUpdatedCount || 0} placares atualizados.`;
+    return `Sincronização de placares: última busca na ${sourceName} em ${formattedDate}. ${scoreSyncStatus.lastUpdatedCount || 0} placares atualizados.`;
   }
 
   return "Sincronização de placares: aguardando primeira busca.";
