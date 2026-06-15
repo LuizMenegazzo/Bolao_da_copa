@@ -1,10 +1,20 @@
-const { handleApiRequest, initStorage } = require("../server");
-
 let initPromise;
+let serverModule;
+
+function getServerModule() {
+  if (!serverModule) {
+    serverModule = require("../server");
+  }
+
+  return serverModule;
+}
 
 function ensureStorage() {
   if (!initPromise) {
-    initPromise = initStorage();
+    initPromise = getServerModule().initStorage().catch((error) => {
+      initPromise = null;
+      throw error;
+    });
   }
 
   return initPromise;
@@ -15,6 +25,8 @@ module.exports = async function vercelApiHandler(request, response) {
     await ensureStorage();
 
     const { pathname } = new URL(request.url, `https://${request.headers.host || "localhost"}`);
+    const { handleApiRequest } = getServerModule();
+
     await handleApiRequest(request, response, pathname);
   } catch (error) {
     console.error("Erro na função da Vercel.", error);
