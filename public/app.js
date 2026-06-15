@@ -27,6 +27,7 @@ const rankingImageOutput = document.querySelector("#ranking-image-output");
 const personalCardsGrid = document.querySelector("#personal-cards-grid");
 const personalCardDetails = document.querySelector("#personal-card-details");
 const syncResultsButton = document.querySelector("#sync-results-button");
+const backupDataButton = document.querySelector("#backup-data-button");
 const scoreSyncStatusElements = document.querySelectorAll(".score-sync-status");
 
 const ADMIN_PASSWORD_KEY = "bolaoAdminPassword";
@@ -142,26 +143,26 @@ const TEAM_FLAG_CODES = {
 };
 
 const PLAYER_CHIBIS = {
-  "CELSO": "celso.png",
-  "CRICIELE": "criciele.png",
-  "CRIS": "cris.png",
-  "GUSTAVO": "gustavo.png",
-  "GABRIEL": "gabriel.png",
-  "JEFF": "jeff.png",
-  "VANDREI": "vandrei.png",
-  "JOAO LAURO": "joao-lauro.png",
-  "LAURA": "laura.png",
-  "THIELI": "thieli.png",
-  "ANDERSON": "anderson.png",
-  "AMANDINHA": "amandinha.png",
-  "LUIZ": "luiz.png",
-  "DANIEL": "daniel.png",
-  "CARLA": "carla.png",
-  "PC": "pc.png",
-  "NELSON": "nelson.png",
-  "DION": "dion.png",
-  "LUCAS": "lucas.png",
-  "VINICIUS": "vinicius.png"
+  "CELSO": "celso.webp",
+  "CRICIELE": "criciele.webp",
+  "CRIS": "cris.webp",
+  "GUSTAVO": "gustavo.webp",
+  "GABRIEL": "gabriel.webp",
+  "JEFF": "jeff.webp",
+  "VANDREI": "vandrei.webp",
+  "JOAO LAURO": "joao-lauro.webp",
+  "LAURA": "laura.webp",
+  "THIELI": "thieli.webp",
+  "ANDERSON": "anderson.webp",
+  "AMANDINHA": "amandinha.webp",
+  "LUIZ": "luiz.webp",
+  "DANIEL": "daniel.webp",
+  "CARLA": "carla.webp",
+  "PC": "pc.webp",
+  "NELSON": "nelson.webp",
+  "DION": "dion.webp",
+  "LUCAS": "lucas.webp",
+  "VINICIUS": "vinicius.webp"
 };
 
 let groups = [];
@@ -206,6 +207,8 @@ document.querySelector('[data-screen="follow-pool"]').addEventListener("click", 
   showScreen(followPoolScreen);
   await loadFollowData();
 });
+
+backupDataButton.addEventListener("click", downloadBackup);
 
 document.querySelector("#back-home").addEventListener("click", () => {
   showScreen(homeScreen);
@@ -1080,6 +1083,48 @@ function clearAdminPassword() {
   sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
 }
 
+async function downloadBackup() {
+  if (!(await requireAdminPassword())) {
+    return;
+  }
+
+  backupDataButton.disabled = true;
+  const originalText = backupDataButton.innerHTML;
+  backupDataButton.innerHTML = "<span>Gerando backup...</span><small>Aguarde alguns segundos</small>";
+
+  try {
+    const response = await fetch("/api/backup", {
+      headers: getAdminHeaders()
+    });
+
+    if (response.status === 401) {
+      clearAdminPassword();
+      showToast("Senha incorreta para baixar o backup.");
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error("Não foi possível gerar o backup.");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `backup-bolao-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("Backup baixado com sucesso.");
+  } catch (error) {
+    showToast(error.message || "Não foi possível baixar o backup.");
+  } finally {
+    backupDataButton.disabled = false;
+    backupDataButton.innerHTML = originalText;
+  }
+}
+
 function generateRankingImage() {
   if (!rankingEntries.length) {
     showToast("Ainda não há ranking para gerar.");
@@ -1481,7 +1526,7 @@ function renderChibiAvatar(playerName, className = "") {
   return `
     <img
       class="chibi-avatar ${className}"
-      src="/chibis/${chibiFile}"
+      src="/chibis-optimized/${chibiFile}"
       alt="Chibi de ${safePlayerName}"
       loading="lazy"
       decoding="async"

@@ -16,12 +16,24 @@ const contentTypes = {
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".png": "image/png",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml"
 };
 
 function sendJson(response, statusCode, data) {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(data));
+}
+
+function sendBackupJson(response, data) {
+  const filename = `backup-bolao-${new Date().toISOString().slice(0, 10)}.json`;
+
+  response.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Cache-Control": "no-store"
+  });
+  response.end(JSON.stringify(data, null, 2));
 }
 
 function isAdminRequest(request) {
@@ -161,7 +173,13 @@ function serveStaticFile(response, pathname) {
     }
 
     const extension = path.extname(filePath);
-    response.writeHead(200, { "Content-Type": contentTypes[extension] || "application/octet-stream" });
+    const headers = { "Content-Type": contentTypes[extension] || "application/octet-stream" };
+
+    if ([".png", ".webp", ".svg"].includes(extension)) {
+      headers["Cache-Control"] = "public, max-age=604800";
+    }
+
+    response.writeHead(200, headers);
     response.end(content);
 
     if (requestedPath === "/index.html") {
@@ -183,6 +201,22 @@ async function handleApiRequest(request, response, pathname) {
 
     if (request.method === "GET" && pathname === "/api/cartelas") {
       sendJson(response, 200, { cartelas: await storage.getCartelas() });
+      return;
+    }
+
+    if (request.method === "GET" && pathname === "/api/backup") {
+      if (!requireAdmin(request, response)) {
+        return;
+      }
+
+      sendBackupJson(response, {
+        generatedAt: new Date().toISOString(),
+        app: "Bolão da Copa UFSM Cachoeira do Sul",
+        groups: loadGroups(),
+        cartelas: await storage.getCartelas(),
+        results: await storage.getResults(),
+        sync: scoreSync.getStatus()
+      });
       return;
     }
 

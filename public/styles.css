@@ -111,7 +111,7 @@ button {
 
 .home-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 16px;
 }
 
@@ -153,6 +153,24 @@ button {
 
 .secondary-action small {
   color: var(--muted);
+}
+
+.backup-action {
+  color: var(--primary-dark);
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.75), transparent 8rem),
+    linear-gradient(135deg, #f9ff72, var(--accent));
+  box-shadow: 0 18px 42px rgba(0, 191, 143, 0.2);
+}
+
+.backup-action small {
+  color: rgba(43, 30, 88, 0.72);
+}
+
+.backup-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
 }
 
 .hidden {

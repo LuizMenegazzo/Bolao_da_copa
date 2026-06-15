@@ -77,6 +77,15 @@ Se o banco estiver vazio, o sistema importa automaticamente os dados atuais de:
 
 Sem `DATABASE_URL`, o projeto continua usando os arquivos `data/cartelas.json` e `data/results.json` apenas para desenvolvimento local.
 
+Na tela inicial, o botão `Baixar backup` gera um arquivo `.json` com:
+
+- grupos e jogos;
+- cartelas salvas;
+- resultados oficiais;
+- status da sincronizacao de placares.
+
+Esse backup usa a senha de administrador e serve como copia de seguranca caso o servico fique fora do ar.
+
 No Render, configure em `Environment`:
 
 ```text
@@ -123,6 +132,7 @@ ESPN_SCOREBOARD_URL=https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.wo
 - `PUT /api/cartelas/:id`: atualiza uma cartela salva.
 - `DELETE /api/cartelas/:id`: exclui uma cartela salva.
 - `GET /api/results`: lista os resultados oficiais salvos.
+- `GET /api/backup`: baixa backup JSON com cartelas, placares e jogos, usando senha de administrador.
 - `GET /api/sync/status`: mostra o status da sincronizacao automatica.
 - `POST /api/results/sync`: forca sincronizacao automatica, usando senha de administrador.
 - `PUT /api/results`: salva resultados oficiais de forma parcial.
