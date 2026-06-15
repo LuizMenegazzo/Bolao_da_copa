@@ -382,6 +382,11 @@ function startServer() {
   });
 }
 
+handleRequest.handleApiRequest = handleApiRequest;
+handleRequest.handleRequest = handleRequest;
+handleRequest.initStorage = storage.initStorage;
+handleRequest.startServer = startServer;
+
 if (require.main === module) {
   startServer().catch((error) => {
     console.error("Não foi possível inicializar o armazenamento.", error);
@@ -389,9 +394,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = {
-  handleApiRequest,
-  handleRequest,
-  initStorage: storage.initStorage,
-  startServer
-};
+module.exports = handleRequest;
