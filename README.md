@@ -93,6 +93,26 @@ ADMIN_PASSWORD=popo
 DATABASE_URL=<url do banco postgres>
 ```
 
+## Vercel como backup
+
+O projeto tambem roda na Vercel como site reserva do Render.
+
+- O Render continua usando `server.js` e `npm start`.
+- A Vercel usa a funcao serverless `api/[...path].js`.
+- O front-end continua em `public/`.
+- Os dois ambientes devem usar o mesmo `DATABASE_URL` para compartilhar cartelas e placares.
+
+Na Vercel, configure em `Settings > Environment Variables`:
+
+```text
+ADMIN_PASSWORD=popo
+DATABASE_URL=<mesma url do banco postgres>
+AUTO_SCORE_SYNC=true
+AUTO_SYNC_LIVE_SCORES=true
+```
+
+Importante: na Vercel, use sempre PostgreSQL/Neon. Os arquivos JSON locais servem apenas para desenvolvimento e backup manual.
+
 ### Sincronizacao de placares
 
 O servidor sincroniza resultados com a ESPN sob demanda:

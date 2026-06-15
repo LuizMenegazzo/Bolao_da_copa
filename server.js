@@ -61,6 +61,18 @@ function getAllMatches() {
 const scoreSync = createScoreSync({ storage, getAllMatches });
 
 function readRequestBody(request) {
+  if (request.body && typeof request.body === "object") {
+    return Promise.resolve(request.body);
+  }
+
+  if (typeof request.body === "string") {
+    try {
+      return Promise.resolve(request.body ? JSON.parse(request.body) : {});
+    } catch (error) {
+      return Promise.reject(new Error("JSON inválido."));
+    }
+  }
+
   return new Promise((resolve, reject) => {
     let body = "";
 
@@ -349,7 +361,7 @@ async function handleApiRequest(request, response, pathname) {
   }
 }
 
-const server = http.createServer((request, response) => {
+function handleRequest(request, response) {
   const { pathname } = new URL(request.url, `http://${request.headers.host}`);
 
   if (pathname.startsWith("/api/")) {
@@ -358,13 +370,28 @@ const server = http.createServer((request, response) => {
   }
 
   serveStaticFile(response, pathname);
-});
+}
 
-storage.initStorage().then(() => {
-  server.listen(PORT, () => {
-    console.log(`Bolão UFSM-CS rodando em http://localhost:${PORT}`);
+function startServer() {
+  const server = http.createServer(handleRequest);
+
+  return storage.initStorage().then(() => {
+    server.listen(PORT, () => {
+      console.log(`Bolão UFSM-CS rodando em http://localhost:${PORT}`);
+    });
   });
-}).catch((error) => {
-  console.error("Não foi possível inicializar o armazenamento.", error);
-  process.exit(1);
-});
+}
+
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error("Não foi possível inicializar o armazenamento.", error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  handleApiRequest,
+  handleRequest,
+  initStorage: storage.initStorage,
+  startServer
+};
