@@ -18,6 +18,10 @@
       </section>
 
       <section id="home-screen" class="panel home-panel">
+        <button class="main-action current-game-action" type="button" data-screen="current-game">
+          <span>Jogo atual</span>
+          <small>Ver o último placar atualizado e como cada cartela pontuou</small>
+        </button>
         <button class="main-action" type="button" data-screen="my-card">
           <span>Acompanhar sua cartela</span>
           <small>Ver pontos feitos, jogos avaliados e próximos palpites</small>
@@ -38,6 +42,22 @@
           <span>Baixar backup</span>
           <small>Salvar cartelas e placares em um arquivo JSON</small>
         </button>
+      </section>
+
+      <section id="current-game-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Último resultado</p>
+            <h2>Jogo atual</h2>
+            <p>Veja o placar mais recente, os palpites e o total atualizado de cada participante.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-home-current-game">Voltar</button>
+        </div>
+
+        <p class="score-sync-status">Sincronização de placares: carregando status...</p>
+        <div id="current-game-content" class="current-game-content" aria-live="polite">
+          <p class="empty-state">Carregando o jogo mais recente...</p>
+        </div>
       </section>
 
       <section id="add-card-screen" class="panel form-panel hidden">

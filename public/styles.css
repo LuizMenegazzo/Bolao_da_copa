@@ -155,6 +155,13 @@ button {
   color: var(--muted);
 }
 
+.current-game-action {
+  background:
+    radial-gradient(circle at top right, rgba(249, 255, 114, 0.34), transparent 9rem),
+    linear-gradient(135deg, #ff5c68, #6638f0 72%);
+  box-shadow: 0 18px 42px rgba(255, 92, 104, 0.24);
+}
+
 .backup-action {
   color: var(--primary-dark);
   background:
@@ -171,6 +178,242 @@ button {
   cursor: wait;
   opacity: 0.72;
   transform: none;
+}
+
+.current-game-content {
+  display: grid;
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.current-match-hero {
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+  color: white;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(249, 255, 114, 0.3), transparent 13rem),
+    linear-gradient(135deg, var(--primary-dark), var(--primary));
+  box-shadow: 0 22px 52px rgba(47, 28, 110, 0.22);
+}
+
+.current-match-meta,
+.current-participants-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.current-match-meta > span:last-child,
+.current-match-hero > small {
+  color: rgba(255, 255, 255, 0.76);
+  font-weight: 750;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: var(--primary-dark);
+  background: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 950;
+}
+
+.current-match-scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+.current-match-team {
+  font-size: clamp(1.35rem, 3vw, 2.35rem);
+  font-weight: 950;
+}
+
+.current-match-team.home {
+  text-align: right;
+}
+
+.current-match-team.away {
+  text-align: left;
+}
+
+.current-match-team .team-with-flag {
+  justify-content: inherit;
+}
+
+.current-match-team .team-flag-image {
+  width: 44px;
+  height: 32px;
+  border-radius: 7px;
+}
+
+.current-match-score {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 20px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.current-match-score strong {
+  font-size: clamp(2.6rem, 7vw, 4.8rem);
+  line-height: 1;
+}
+
+.current-match-score span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.current-participants-section {
+  display: grid;
+  gap: 14px;
+}
+
+.current-participants-title h3,
+.current-participants-title p {
+  margin: 0;
+}
+
+.current-participants-title h3 {
+  font-size: 1.6rem;
+}
+
+.current-participants-title > span {
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: var(--primary-dark);
+  background: #f4f1ff;
+  font-weight: 900;
+}
+
+.current-participants-list {
+  display: grid;
+  gap: 10px;
+}
+
+.current-participant-card {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) 120px 130px 130px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 6px solid #d9d5e8;
+  border-radius: 20px;
+  background: white;
+}
+
+.current-participant-card.complete {
+  border-left-color: #19c37d;
+}
+
+.current-participant-card.intermediate {
+  border-left-color: #5b8cff;
+}
+
+.current-participant-card.basic {
+  border-left-color: #f2b84b;
+}
+
+.current-participant-card.inverted {
+  border-left-color: #ff5c68;
+  background: #fff8f8;
+}
+
+.current-participant-player {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.current-rank {
+  min-width: 42px;
+  padding: 9px;
+  text-align: center;
+  border-radius: 14px;
+  color: var(--primary-dark);
+  background: #f4f1ff;
+  font-weight: 950;
+}
+
+.current-game-chibi {
+  width: 66px;
+  height: 66px;
+  border-radius: 20px;
+}
+
+.current-participant-player strong,
+.current-participant-player span,
+.current-prediction span,
+.current-game-points span,
+.current-total-points span {
+  display: block;
+}
+
+.current-participant-player strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.15rem;
+}
+
+.current-participant-player div span,
+.current-prediction span,
+.current-game-points span,
+.current-total-points span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.current-prediction,
+.current-game-points,
+.current-total-points {
+  padding: 10px 12px;
+  text-align: center;
+  border-radius: 15px;
+  background: #f8f6ff;
+}
+
+.current-prediction strong,
+.current-game-points strong,
+.current-total-points strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 1.15rem;
+}
+
+.current-game-points {
+  color: #078257;
+  background: #eafaf4;
+}
+
+.current-game-points.negative {
+  color: #d6374a;
+  background: #fff0f1;
+}
+
+.current-total-points {
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+.current-total-points span {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .hidden {
@@ -1100,6 +1343,7 @@ button {
   .ranking-summary,
   .individual-summary,
   .ranking-card,
+  .current-participant-card,
   .score-detail-card,
   .upcoming-prediction-card {
     grid-template-columns: 1fr;
@@ -1118,6 +1362,12 @@ button {
 
   .ranking-rank-area {
     justify-content: flex-start;
+  }
+
+  .current-prediction,
+  .current-game-points,
+  .current-total-points {
+    justify-self: stretch;
   }
 
   .upcoming-match-teams {
@@ -1208,6 +1458,70 @@ button {
 
   .main-action small {
     font-size: 0.86rem;
+  }
+
+  .current-game-content {
+    gap: 16px;
+    margin-top: 14px;
+  }
+
+  .current-match-hero {
+    gap: 18px;
+    padding: 20px 16px;
+    border-radius: 22px;
+  }
+
+  .current-match-meta,
+  .current-participants-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .current-match-scoreboard {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .current-match-team.home,
+  .current-match-team.away {
+    text-align: center;
+  }
+
+  .current-match-team .team-with-flag {
+    justify-content: center;
+  }
+
+  .current-match-score {
+    justify-self: center;
+    padding: 12px 18px;
+  }
+
+  .current-participant-card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .current-participant-player {
+    grid-column: 1 / -1;
+  }
+
+  .current-game-chibi {
+    width: 58px;
+    height: 58px;
+  }
+
+  .current-prediction,
+  .current-game-points,
+  .current-total-points {
+    padding: 9px 5px;
+  }
+
+  .current-prediction strong,
+  .current-game-points strong,
+  .current-total-points strong {
+    font-size: 1rem;
   }
 
   .section-header {

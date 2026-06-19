@@ -30,6 +30,7 @@ http://localhost:3000
 
 ## O que já existe
 
+- Tela `Jogo atual` com o último placar atualizado, palpites, pontos do jogo, total geral e chibis.
 - Tela inicial com os botões `Adicionar cartela`, `Acompanhar bolão` e `Atualizar placares`.
 - Formulário de cartela com nome do jogador.
 - Jogos da fase de grupos separados por grupos, na ordem fornecida.

@@ -1,4 +1,5 @@
 const homeScreen = document.querySelector("#home-screen");
+const currentGameScreen = document.querySelector("#current-game-screen");
 const addCardScreen = document.querySelector("#add-card-screen");
 const updateScoresScreen = document.querySelector("#update-scores-screen");
 const followPoolScreen = document.querySelector("#follow-pool-screen");
@@ -28,6 +29,7 @@ const personalCardsGrid = document.querySelector("#personal-cards-grid");
 const personalCardDetails = document.querySelector("#personal-card-details");
 const syncResultsButton = document.querySelector("#sync-results-button");
 const backupDataButton = document.querySelector("#backup-data-button");
+const currentGameContent = document.querySelector("#current-game-content");
 const scoreSyncStatusElements = document.querySelectorAll(".score-sync-status");
 
 const ADMIN_PASSWORD_KEY = "bolaoAdminPassword";
@@ -173,6 +175,11 @@ let rankingEntries = [];
 let personalEntries = [];
 let scoreSyncStatus = null;
 
+document.querySelector('[data-screen="current-game"]').addEventListener("click", async () => {
+  showScreen(currentGameScreen);
+  await loadCurrentGameData();
+});
+
 document.querySelector('[data-screen="add-card"]').addEventListener("click", async () => {
   showScreen(addCardScreen);
 
@@ -225,6 +232,10 @@ document.querySelector("#back-home-follow").addEventListener("click", () => {
 });
 
 document.querySelector("#back-home-my-card").addEventListener("click", () => {
+  showScreen(homeScreen);
+});
+
+document.querySelector("#back-home-current-game").addEventListener("click", () => {
   showScreen(homeScreen);
 });
 
@@ -463,6 +474,106 @@ async function loadPersonalCardsData() {
   } catch (error) {
     personalCardsGrid.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
   }
+}
+
+async function loadCurrentGameData() {
+  currentGameContent.innerHTML = '<p class="empty-state">Atualizando o placar mais recente...</p>';
+
+  if (!groups.length) {
+    await loadMatches();
+  }
+
+  try {
+    await Promise.all([fetchCartelas(), fetchResults()]);
+    renderCurrentGame();
+  } catch (error) {
+    currentGameContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderCurrentGame() {
+  const currentMatch = getLatestUpdatedMatch();
+
+  if (!currentMatch) {
+    currentGameContent.innerHTML = '<p class="empty-state">Ainda não há nenhum placar oficial atualizado.</p>';
+    return;
+  }
+
+  const currentResult = results[currentMatch.id];
+  const ranking = calculateRanking(getScoredMatches());
+  const participants = ranking.map((entry) => {
+    const detail = entry.details.find((scoreDetail) => scoreDetail.match.id === currentMatch.id);
+
+    return {
+      ...entry,
+      currentDetail: detail
+    };
+  });
+  const updatedAt = currentResult.updatedAt ? formatDate(currentResult.updatedAt) : "Horário não informado";
+
+  currentGameContent.innerHTML = `
+    <section class="current-match-hero">
+      <div class="current-match-meta">
+        <span class="live-pill">⚽ Último placar atualizado</span>
+        <span>${currentMatch.dateLabel} • ${currentMatch.time} • Grupo ${currentMatch.group}</span>
+      </div>
+      <div class="current-match-scoreboard">
+        <div class="current-match-team home">${formatTeamNameImage(currentMatch.home)}</div>
+        <div class="current-match-score">
+          <strong>${currentResult.homeScore}</strong>
+          <span>x</span>
+          <strong>${currentResult.awayScore}</strong>
+        </div>
+        <div class="current-match-team away">${formatTeamNameImage(currentMatch.away)}</div>
+      </div>
+      <small>Atualizado em ${escapeHtml(updatedAt)}</small>
+    </section>
+
+    <section class="current-participants-section">
+      <div class="current-participants-title">
+        <div>
+          <p class="eyebrow">Impacto no bolão</p>
+          <h3>Palpites e pontuação</h3>
+        </div>
+        <span>${participants.length} cartelas</span>
+      </div>
+      <div class="current-participants-list">
+        ${participants.map((entry) => renderCurrentParticipant(entry)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderCurrentParticipant(entry) {
+  const detail = entry.currentDetail;
+  const prediction = detail?.prediction;
+  const points = detail?.points || 0;
+  const type = detail?.type || "none";
+
+  return `
+    <article class="current-participant-card ${type}">
+      <div class="current-participant-player">
+        <span class="current-rank">${entry.rank}º</span>
+        ${renderChibiAvatar(entry.playerName, "current-game-chibi")}
+        <div>
+          <strong>${escapeHtml(entry.playerName)}</strong>
+          <span>${SCORE_LABELS[type]}</span>
+        </div>
+      </div>
+      <div class="current-prediction">
+        <span>Palpite</span>
+        <strong>${formatPrediction(prediction)}</strong>
+      </div>
+      <div class="current-game-points ${points < 0 ? "negative" : ""}">
+        <span>Neste jogo</span>
+        <strong>${points > 0 ? "+" : ""}${points} pts</strong>
+      </div>
+      <div class="current-total-points">
+        <span>Total agora</span>
+        <strong>${entry.total} pts</strong>
+      </div>
+    </article>
+  `;
 }
 
 async function fetchCartelas() {
@@ -984,6 +1095,19 @@ function getScoredMatches() {
   });
 }
 
+function getLatestUpdatedMatch() {
+  return getScoredMatches().reduce((latestMatch, match) => {
+    if (!latestMatch) {
+      return match;
+    }
+
+    const currentUpdatedAt = Date.parse(results[match.id]?.updatedAt || "") || 0;
+    const latestUpdatedAt = Date.parse(results[latestMatch.id]?.updatedAt || "") || 0;
+
+    return currentUpdatedAt >= latestUpdatedAt ? match : latestMatch;
+  }, null);
+}
+
 function getUpcomingMatches() {
   return getChronologicalMatches().filter((match) => {
     const result = results[match.id];
@@ -1373,6 +1497,7 @@ function resetFormState() {
 
 function showScreen(screen) {
   homeScreen.classList.toggle("hidden", screen !== homeScreen);
+  currentGameScreen.classList.toggle("hidden", screen !== currentGameScreen);
   addCardScreen.classList.toggle("hidden", screen !== addCardScreen);
   updateScoresScreen.classList.toggle("hidden", screen !== updateScoresScreen);
   followPoolScreen.classList.toggle("hidden", screen !== followPoolScreen);
