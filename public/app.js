@@ -993,26 +993,36 @@ function renderUpcomingPredictions(upcomingPredictions) {
 
 function calculateRanking(scoredMatches) {
   const entries = cartelas.map((cartela) => scoreCartela(cartela, scoredMatches));
-  entries.sort((firstEntry, secondEntry) => {
-    if (secondEntry.total !== firstEntry.total) {
-      return secondEntry.total - firstEntry.total;
-    }
-
-    if (secondEntry.counts.complete !== firstEntry.counts.complete) {
-      return secondEntry.counts.complete - firstEntry.counts.complete;
-    }
-
-    if (secondEntry.counts.intermediate !== firstEntry.counts.intermediate) {
-      return secondEntry.counts.intermediate - firstEntry.counts.intermediate;
-    }
-
-    return firstEntry.playerName.localeCompare(secondEntry.playerName, "pt-BR");
-  });
+  entries.sort(compareRankingEntries);
 
   return entries.map((entry, index, sortedEntries) => ({
     ...entry,
     rank: getCompetitionRank(sortedEntries, index)
   }));
+}
+
+function compareRankingEntries(firstEntry, secondEntry) {
+  if (secondEntry.total !== firstEntry.total) {
+    return secondEntry.total - firstEntry.total;
+  }
+
+  if (secondEntry.counts.complete !== firstEntry.counts.complete) {
+    return secondEntry.counts.complete - firstEntry.counts.complete;
+  }
+
+  if (secondEntry.counts.intermediate !== firstEntry.counts.intermediate) {
+    return secondEntry.counts.intermediate - firstEntry.counts.intermediate;
+  }
+
+  if (secondEntry.counts.basic !== firstEntry.counts.basic) {
+    return secondEntry.counts.basic - firstEntry.counts.basic;
+  }
+
+  if (firstEntry.counts.inverted !== secondEntry.counts.inverted) {
+    return firstEntry.counts.inverted - secondEntry.counts.inverted;
+  }
+
+  return firstEntry.playerName.localeCompare(secondEntry.playerName, "pt-BR");
 }
 
 function scoreCartela(cartela, scoredMatches) {
@@ -1123,11 +1133,19 @@ function getCompetitionRank(sortedEntries, index) {
   const currentEntry = sortedEntries[index];
   const previousEntry = sortedEntries[index - 1];
 
-  if (currentEntry.total === previousEntry.total) {
+  if (haveSameRankingCriteria(currentEntry, previousEntry)) {
     return previousEntry.rank || getCompetitionRank(sortedEntries, index - 1);
   }
 
   return index + 1;
+}
+
+function haveSameRankingCriteria(firstEntry, secondEntry) {
+  return firstEntry.total === secondEntry.total
+    && firstEntry.counts.complete === secondEntry.counts.complete
+    && firstEntry.counts.intermediate === secondEntry.counts.intermediate
+    && firstEntry.counts.basic === secondEntry.counts.basic
+    && firstEntry.counts.inverted === secondEntry.counts.inverted;
 }
 
 function getRankBadge(entry, index, totalEntries) {

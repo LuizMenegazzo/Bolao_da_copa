@@ -145,6 +145,13 @@ ESPN_SCOREBOARD_URL=https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.wo
 - Acerto invertido: `-2 pontos` quando acerta exatamente o oposto do resultado.
 - Nenhum acerto: `0 pontos`.
 
+Em caso de empate no total, o ranking usa nesta ordem:
+
+1. mais acertos completos;
+2. mais acertos intermediários;
+3. mais acertos básicos;
+4. menos acertos invertidos.
+
 ## Rotas da API
 
 - `GET /api/matches`: lista os jogos por grupo.
