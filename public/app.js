@@ -500,7 +500,7 @@ function renderCurrentGame() {
   }
 
   const currentResult = results[currentMatch.id];
-  const ranking = calculateRanking(getScoredMatches());
+  const ranking = calculateRankingWithMovement(getScoredMatches());
   const participants = ranking.map((entry) => {
     const detail = entry.details.find((scoreDetail) => scoreDetail.match.id === currentMatch.id);
 
@@ -553,7 +553,10 @@ function renderCurrentParticipant(entry) {
   return `
     <article class="current-participant-card ${type}">
       <div class="current-participant-player">
-        <span class="current-rank">${entry.rank}º</span>
+        <div class="current-rank-stack">
+          <span class="current-rank">${entry.rank}º</span>
+          ${renderRankMovement(entry.movement)}
+        </div>
         ${renderChibiAvatar(entry.playerName, "current-game-chibi")}
         <div>
           <strong>${escapeHtml(entry.playerName)}</strong>
@@ -740,7 +743,7 @@ function renderCartelas(cartelasList) {
 
 function renderFollowDashboard() {
   const scoredMatches = getScoredMatches();
-  rankingEntries = calculateRanking(scoredMatches);
+  rankingEntries = calculateRankingWithMovement(scoredMatches);
   renderRanking(scoredMatches);
   renderCartelaOptions();
   renderIndividualCartela(cartelaSelect.value);
@@ -776,7 +779,10 @@ function renderRanking(scoredMatches) {
     return `
       <article class="ranking-card ${index < 3 ? "podium" : ""}">
         <div class="ranking-rank-area">
-          <div class="rank-position">${rankBadge}</div>
+          <div class="rank-position-stack">
+            <div class="rank-position">${rankBadge}</div>
+            ${renderRankMovement(entry.movement)}
+          </div>
           ${renderChibiAvatar(entry.playerName, "ranking-chibi")}
         </div>
         <div class="ranking-player">
@@ -999,6 +1005,38 @@ function calculateRanking(scoredMatches) {
     ...entry,
     rank: getCompetitionRank(sortedEntries, index)
   }));
+}
+
+function calculateRankingWithMovement(scoredMatches) {
+  const currentRanking = calculateRanking(scoredMatches);
+  const latestMatch = getLatestUpdatedMatch();
+
+  if (!latestMatch || scoredMatches.length < 2) {
+    return currentRanking.map((entry) => ({ ...entry, movement: 0 }));
+  }
+
+  const previousRanking = calculateRanking(
+    scoredMatches.filter((match) => match.id !== latestMatch.id)
+  );
+  const previousRanks = new Map(previousRanking.map((entry) => [entry.id, entry.rank]));
+
+  return currentRanking.map((entry) => ({
+    ...entry,
+    movement: (previousRanks.get(entry.id) || entry.rank) - entry.rank
+  }));
+}
+
+function renderRankMovement(movement) {
+  if (movement > 0) {
+    return `<span class="rank-movement up" title="Subiu ${movement} ${movement === 1 ? "posição" : "posições"}">▲ ${movement}</span>`;
+  }
+
+  if (movement < 0) {
+    const positions = Math.abs(movement);
+    return `<span class="rank-movement down" title="Desceu ${positions} ${positions === 1 ? "posição" : "posições"}">▼ ${positions}</span>`;
+  }
+
+  return '<span class="rank-movement stable" title="Manteve a posição">—</span>';
 }
 
 function compareRankingEntries(firstEntry, secondEntry) {
@@ -1355,9 +1393,19 @@ function drawRankingImageRow(context, entry, index, totalEntries, x, y, width, h
 
   context.textAlign = "left";
   context.fillStyle = "#17152d";
-  context.font = "900 34px Arial";
-  context.fillText(getRankBadge(entry, index, totalEntries), x + 30, y + 58);
+  context.font = "900 30px Arial";
+  context.fillText(getRankBadge(entry, index, totalEntries), x + 30, y + 43);
 
+  const movementText = entry.movement > 0
+    ? `▲ ${entry.movement}`
+    : entry.movement < 0
+      ? `▼ ${Math.abs(entry.movement)}`
+      : "—";
+  context.fillStyle = entry.movement > 0 ? "#078257" : entry.movement < 0 ? "#d6374a" : "#817a98";
+  context.font = "900 22px Arial";
+  context.fillText(movementText, x + 34, y + 76);
+
+  context.fillStyle = "#17152d";
   context.font = "900 38px Arial";
   context.fillText(truncateText(context, entry.playerName, 410), x + 190, y + 48);
 

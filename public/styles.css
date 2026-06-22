@@ -350,6 +350,43 @@ button {
   font-weight: 950;
 }
 
+.current-rank-stack,
+.rank-position-stack {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.rank-movement {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.rank-movement.up,
+.current-participant-player .rank-movement.up {
+  color: #078257;
+  background: #e5f9f1;
+}
+
+.rank-movement.down,
+.current-participant-player .rank-movement.down {
+  color: #d6374a;
+  background: #fff0f1;
+}
+
+.rank-movement.stable,
+.current-participant-player .rank-movement.stable {
+  color: #817a98;
+  background: #f2f0f7;
+}
+
 .current-game-chibi {
   width: 66px;
   height: 66px;
