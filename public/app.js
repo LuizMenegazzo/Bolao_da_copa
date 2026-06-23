@@ -167,7 +167,16 @@ const PLAYER_CHIBIS = {
   "VINICIUS": "vinicius.webp"
 };
 
+const CHIBI_ASSET_VERSION = "2026-06-23-2";
 const MATE_CHIBI_KEYS = new Set(["AMANDINHA", "CARLA", "CRICIELE", "CRIS", "LAURA", "THIELI"]);
+const COUPLE_CHIBIS = [
+  { keys: ["LUIZ", "AMANDINHA"], file: "luiz_amandinha.webp" },
+  { keys: ["GUSTAVO", "THIELI"], file: "gustavo_thieli.webp" },
+  { keys: ["ANDERSON", "CELSO"], file: "celso_anderson.webp" },
+  { keys: ["CARLA", "LUCAS"], file: "carla_lucas.webp" },
+  { keys: ["CRICIELE", "VINICIUS"], file: "criciele_vinicius.webp" },
+  { keys: ["LAURA", "DANIEL"], file: "laura_daniel.webp" }
+];
 
 let groups = [];
 let cartelas = [];
@@ -1473,7 +1482,7 @@ function loadRankingChibiImages(entries, chibiContext) {
       return [entry.id, null];
     }
 
-    return loadImage(`/chibis-optimized/${chibiFile}`)
+    return loadImage(getChibiSource(chibiFile))
       .then((image) => [entry.id, image])
       .catch(() => [entry.id, null]);
   })).then((images) => new Map(images));
@@ -1773,9 +1782,19 @@ function createChibiContext(entries = []) {
   const orderedEntries = [...entries];
   const mateKeysInSequence = new Set();
   const tableIndexByKey = new Map();
+  const coupleChibiByKey = new Map();
 
   orderedEntries.forEach((entry, index) => {
     tableIndexByKey.set(getPersonKey(entry.playerName), index);
+  });
+
+  COUPLE_CHIBIS.forEach((couple) => {
+    const firstIndex = tableIndexByKey.get(couple.keys[0]);
+    const secondIndex = tableIndexByKey.get(couple.keys[1]);
+
+    if (Number.isInteger(firstIndex) && Number.isInteger(secondIndex) && Math.abs(firstIndex - secondIndex) === 1) {
+      couple.keys.forEach((key) => coupleChibiByKey.set(key, couple.file));
+    }
   });
 
   let currentMateRun = [];
@@ -1801,6 +1820,7 @@ function createChibiContext(entries = []) {
 
   return {
     latestMatchId,
+    coupleChibiByKey,
     mateKeysInSequence,
     tableIndexByKey,
     totalEntries: orderedEntries.length
@@ -1824,12 +1844,16 @@ function renderChibiAvatar(playerName, className = "", entry = null, chibiContex
   return `
     <img
       class="chibi-avatar ${className}"
-      src="/chibis-optimized/${chibiFile}"
+      src="${getChibiSource(chibiFile)}"
       alt="Chibi de ${safePlayerName}"
       loading="lazy"
       decoding="async"
     />
   `;
+}
+
+function getChibiSource(chibiFile) {
+  return `/chibis-optimized/${chibiFile}?v=${CHIBI_ASSET_VERSION}`;
 }
 
 function getChibiFile(playerName, entry = null, chibiContext = null) {
@@ -1841,6 +1865,11 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
   }
 
   const currentPoints = getCurrentGamePoints(entry, chibiContext);
+  const coupleChibi = chibiContext?.coupleChibiByKey?.get(key);
+
+  if (coupleChibi) {
+    return coupleChibi;
+  }
 
   if (currentPoints === 10) {
     return getChibiVariant(defaultChibi, "especial");
