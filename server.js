@@ -187,7 +187,9 @@ function serveStaticFile(response, pathname) {
     const extension = path.extname(filePath);
     const headers = { "Content-Type": contentTypes[extension] || "application/octet-stream" };
 
-    if ([".png", ".webp", ".svg"].includes(extension)) {
+    if (requestedPath.startsWith("/chibis/") || requestedPath.startsWith("/chibis-optimized/")) {
+      headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    } else if ([".png", ".webp", ".svg"].includes(extension)) {
       headers["Cache-Control"] = "public, max-age=604800";
     }
 

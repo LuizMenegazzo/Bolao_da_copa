@@ -167,6 +167,8 @@ const PLAYER_CHIBIS = {
   "VINICIUS": "vinicius.webp"
 };
 
+const MATE_CHIBI_KEYS = new Set(["AMANDINHA", "CARLA", "CRICIELE", "CRIS", "LAURA", "THIELI"]);
+
 let groups = [];
 let cartelas = [];
 let results = {};
@@ -259,8 +261,12 @@ cartelaSelect.addEventListener("change", () => {
   renderIndividualCartela(cartelaSelect.value);
 });
 
-generateRankingImageButton.addEventListener("click", () => {
-  generateRankingImage();
+generateRankingImageButton.addEventListener("click", async () => {
+  try {
+    await generateRankingImage();
+  } catch (error) {
+    showToast(error.message || "Não foi possível gerar a imagem do ranking.");
+  }
 });
 
 syncResultsButton?.addEventListener("click", async () => {
@@ -509,6 +515,7 @@ function renderCurrentGame() {
       currentDetail: detail
     };
   });
+  const chibiContext = createChibiContext(participants);
   const updatedAt = currentResult.updatedAt ? formatDate(currentResult.updatedAt) : "Horário não informado";
 
   currentGameContent.innerHTML = `
@@ -538,13 +545,13 @@ function renderCurrentGame() {
         <span>${participants.length} cartelas</span>
       </div>
       <div class="current-participants-list">
-        ${participants.map((entry) => renderCurrentParticipant(entry)).join("")}
+        ${participants.map((entry) => renderCurrentParticipant(entry, chibiContext)).join("")}
       </div>
     </section>
   `;
 }
 
-function renderCurrentParticipant(entry) {
+function renderCurrentParticipant(entry, chibiContext) {
   const detail = entry.currentDetail;
   const prediction = detail?.prediction;
   const points = detail?.points || 0;
@@ -557,7 +564,7 @@ function renderCurrentParticipant(entry) {
           <span class="current-rank">${entry.rank}º</span>
           ${renderRankMovement(entry.movement)}
         </div>
-        ${renderChibiAvatar(entry.playerName, "current-game-chibi")}
+        ${renderChibiAvatar(entry.playerName, "current-game-chibi", entry, chibiContext)}
         <div>
           <strong>${escapeHtml(entry.playerName)}</strong>
           <span>${SCORE_LABELS[type]}</span>
@@ -772,6 +779,8 @@ function renderRanking(scoredMatches) {
     return;
   }
 
+  const chibiContext = createChibiContext(rankingEntries);
+
   rankingList.innerHTML = rankingEntries.map((entry, index) => {
     const rankBadge = getRankBadge(entry, index, rankingEntries.length);
     const accuracy = entry.played ? Math.round((entry.counts.complete / entry.played) * 100) : 0;
@@ -783,7 +792,7 @@ function renderRanking(scoredMatches) {
             <div class="rank-position">${rankBadge}</div>
             ${renderRankMovement(entry.movement)}
           </div>
-          ${renderChibiAvatar(entry.playerName, "ranking-chibi")}
+          ${renderChibiAvatar(entry.playerName, "ranking-chibi", entry, chibiContext)}
         </div>
         <div class="ranking-player">
           <strong>${escapeHtml(entry.playerName)}</strong>
@@ -867,9 +876,11 @@ function renderPersonalCardsGrid() {
     return;
   }
 
+  const chibiContext = createChibiContext(personalEntries);
+
   personalCardsGrid.innerHTML = personalEntries.map((entry, index) => `
     <button class="personal-card-button ${index === 0 ? "active" : ""}" type="button" data-personal-cartela-id="${entry.id}">
-      ${renderChibiAvatar(entry.playerName, "personal-card-chibi")}
+      ${renderChibiAvatar(entry.playerName, "personal-card-chibi", entry, chibiContext)}
       <span class="personal-card-rank">${entry.rank}º</span>
       <strong>${escapeHtml(entry.playerName)}</strong>
       <small>${entry.total} pts • ${entry.played} jogos avaliados</small>
@@ -896,10 +907,12 @@ function renderPersonalCardDetails(cartelaId) {
     button.classList.toggle("active", button.dataset.personalCartelaId === entry.id);
   });
 
+  const chibiContext = createChibiContext(personalEntries);
+
   personalCardDetails.innerHTML = `
     <section class="personal-hero-card">
       <div class="personal-hero-player">
-        ${renderChibiAvatar(entry.playerName, "personal-hero-chibi")}
+        ${renderChibiAvatar(entry.playerName, "personal-hero-chibi", entry, chibiContext)}
         <div>
         <p class="eyebrow">Cartela selecionada</p>
         <h3>${escapeHtml(entry.playerName)}</h3>
@@ -1305,7 +1318,7 @@ async function downloadBackup() {
   }
 }
 
-function generateRankingImage() {
+async function generateRankingImage() {
   if (!rankingEntries.length) {
     showToast("Ainda não há ranking para gerar.");
     return;
@@ -1319,13 +1332,15 @@ function generateRankingImage() {
   canvas.height = height;
   const context = canvas.getContext("2d");
   const scoredMatches = getScoredMatches();
+  const chibiContext = createChibiContext(rankingEntries);
+  const chibiImages = await loadRankingChibiImages(rankingEntries, chibiContext);
 
   drawRankingImageBackground(context, width, height);
   drawRankingImageHeader(context, width, scoredMatches);
 
   let y = 360;
   rankingEntries.forEach((entry, index) => {
-    drawRankingImageRow(context, entry, index, rankingEntries.length, 70, y, width - 140, 96);
+    drawRankingImageRow(context, entry, index, rankingEntries.length, 70, y, width - 140, 96, chibiImages.get(entry.id));
     y += rowHeight;
   });
 
@@ -1387,7 +1402,7 @@ function drawRankingImagePill(context, x, y, width, height, emoji, text) {
   context.fillText(text, x + 82, y + 51);
 }
 
-function drawRankingImageRow(context, entry, index, totalEntries, x, y, width, height) {
+function drawRankingImageRow(context, entry, index, totalEntries, x, y, width, height, chibiImage) {
   const isPodium = index < 3;
   drawRoundRect(context, x, y, width, height, 28, isPodium ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.82)");
 
@@ -1405,13 +1420,15 @@ function drawRankingImageRow(context, entry, index, totalEntries, x, y, width, h
   context.font = "900 22px Arial";
   context.fillText(movementText, x + 34, y + 76);
 
+  drawRankingImageChibi(context, chibiImage, x + 128, y + 13, 70, entry.playerName);
+
   context.fillStyle = "#17152d";
   context.font = "900 38px Arial";
-  context.fillText(truncateText(context, entry.playerName, 410), x + 190, y + 48);
+  context.fillText(truncateText(context, entry.playerName, 365), x + 220, y + 48);
 
   context.fillStyle = "#6f6a86";
   context.font = "700 24px Arial";
-  context.fillText(`🎯 ${entry.counts.complete}   ✨ ${entry.counts.intermediate}   ✅ ${entry.counts.basic}   🔄 ${entry.counts.inverted}`, x + 190, y + 80);
+  context.fillText(`🎯 ${entry.counts.complete}   ✨ ${entry.counts.intermediate}   ✅ ${entry.counts.basic}   🔄 ${entry.counts.inverted}`, x + 220, y + 80);
 
   const pointsBoxWidth = 150;
   drawRoundRect(context, x + width - pointsBoxWidth - 24, y + 18, pointsBoxWidth, 60, 18, "#19c37d");
@@ -1419,6 +1436,56 @@ function drawRankingImageRow(context, entry, index, totalEntries, x, y, width, h
   context.fillStyle = "#ffffff";
   context.font = "900 34px Arial";
   context.fillText(`${entry.total} pts`, x + width - pointsBoxWidth / 2 - 24, y + 58);
+}
+
+function drawRankingImageChibi(context, chibiImage, x, y, size, playerName) {
+  context.save();
+  context.beginPath();
+  context.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+  context.fillStyle = "#ffffff";
+  context.fill();
+  context.clip();
+
+  if (chibiImage) {
+    context.drawImage(chibiImage, x, y, size, size);
+  } else {
+    context.fillStyle = "#f2edff";
+    context.fillRect(x, y, size, size);
+    context.fillStyle = "#4320a8";
+    context.font = "900 26px Arial";
+    context.textAlign = "center";
+    context.fillText(getInitials(playerName), x + size / 2, y + size / 2 + 9);
+  }
+
+  context.restore();
+  context.strokeStyle = "rgba(67,32,168,0.24)";
+  context.lineWidth = 4;
+  context.beginPath();
+  context.arc(x + size / 2, y + size / 2, size / 2 - 2, 0, Math.PI * 2);
+  context.stroke();
+}
+
+function loadRankingChibiImages(entries, chibiContext) {
+  return Promise.all(entries.map((entry) => {
+    const chibiFile = getChibiFile(entry.playerName, entry, chibiContext);
+
+    if (!chibiFile) {
+      return [entry.id, null];
+    }
+
+    return loadImage(`/chibis-optimized/${chibiFile}`)
+      .then((image) => [entry.id, image])
+      .catch(() => [entry.id, null]);
+  })).then((images) => new Map(images));
+}
+
+function loadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = source;
+  });
 }
 
 function drawRoundRect(context, x, y, width, height, radius, fillStyle) {
@@ -1700,9 +1767,49 @@ function formatPrediction(prediction) {
   return `${prediction.homeScore}x${prediction.awayScore}`;
 }
 
-function renderChibiAvatar(playerName, className = "") {
+function createChibiContext(entries = []) {
+  const latestMatch = getLatestUpdatedMatch();
+  const latestMatchId = latestMatch?.id || null;
+  const orderedEntries = [...entries];
+  const mateKeysInSequence = new Set();
+  const tableIndexByKey = new Map();
+
+  orderedEntries.forEach((entry, index) => {
+    tableIndexByKey.set(getPersonKey(entry.playerName), index);
+  });
+
+  let currentMateRun = [];
+  const flushMateRun = () => {
+    if (currentMateRun.length >= 3) {
+      currentMateRun.forEach((key) => mateKeysInSequence.add(key));
+    }
+
+    currentMateRun = [];
+  };
+
+  orderedEntries.forEach((entry) => {
+    const key = getPersonKey(entry.playerName);
+
+    if (MATE_CHIBI_KEYS.has(key)) {
+      currentMateRun.push(key);
+      return;
+    }
+
+    flushMateRun();
+  });
+  flushMateRun();
+
+  return {
+    latestMatchId,
+    mateKeysInSequence,
+    tableIndexByKey,
+    totalEntries: orderedEntries.length
+  };
+}
+
+function renderChibiAvatar(playerName, className = "", entry = null, chibiContext = null) {
   const safePlayerName = escapeHtml(playerName);
-  const chibiFile = PLAYER_CHIBIS[getPersonKey(playerName)];
+  const chibiFile = getChibiFile(playerName, entry, chibiContext);
 
   if (!chibiFile) {
     const initials = getInitials(playerName);
@@ -1723,6 +1830,90 @@ function renderChibiAvatar(playerName, className = "") {
       decoding="async"
     />
   `;
+}
+
+function getChibiFile(playerName, entry = null, chibiContext = null) {
+  const key = getPersonKey(playerName);
+  const defaultChibi = PLAYER_CHIBIS[key];
+
+  if (!defaultChibi) {
+    return null;
+  }
+
+  const currentPoints = getCurrentGamePoints(entry, chibiContext);
+
+  if (currentPoints === 10) {
+    return getChibiVariant(defaultChibi, "especial");
+  }
+
+  if (chibiContext?.mateKeysInSequence?.has(key)) {
+    return getChibiVariant(defaultChibi, "mate");
+  }
+
+  if (key === "GABRIEL" && currentPoints === -2) {
+    return "gabriel_2_especial.webp";
+  }
+
+  if (entry?.rank === 1) {
+    return getChibiVariant(defaultChibi, "especial");
+  }
+
+  if (key === "VINICIUS") {
+    const viniciusIndex = chibiContext?.tableIndexByKey?.get("VINICIUS");
+    const lucasIndex = chibiContext?.tableIndexByKey?.get("LUCAS");
+
+    if (Number.isInteger(viniciusIndex) && Number.isInteger(lucasIndex)) {
+      if (viniciusIndex < lucasIndex) {
+        return getChibiVariant(defaultChibi, "feliz");
+      }
+
+      if (viniciusIndex > lucasIndex) {
+        return getChibiVariant(defaultChibi, "triste");
+      }
+    }
+  }
+
+  if (isBottomThree(entry, chibiContext) || currentPoints === -2) {
+    return getChibiVariant(defaultChibi, "triste");
+  }
+
+  if (currentPoints === 6 || currentPoints === 5) {
+    return getChibiVariant(defaultChibi, "feliz");
+  }
+
+  if (currentPoints === 0) {
+    return getChibiVariant(defaultChibi, "neutro");
+  }
+
+  return defaultChibi;
+}
+
+function getCurrentGamePoints(entry, chibiContext) {
+  if (!entry || !chibiContext?.latestMatchId) {
+    return null;
+  }
+
+  const currentDetail = entry.currentDetail || entry.details?.find((detail) => detail.match.id === chibiContext.latestMatchId);
+
+  if (!currentDetail || !Number.isFinite(Number(currentDetail.points))) {
+    return null;
+  }
+
+  return Number(currentDetail.points);
+}
+
+function isBottomThree(entry, chibiContext) {
+  if (!entry || !chibiContext?.tableIndexByKey || chibiContext.totalEntries < 4) {
+    return false;
+  }
+
+  const index = chibiContext.tableIndexByKey.get(getPersonKey(entry.playerName));
+
+  return Number.isInteger(index) && index >= chibiContext.totalEntries - 3;
+}
+
+function getChibiVariant(defaultChibi, variant) {
+  return `${defaultChibi.replace(/\.webp$/i, "")}_${variant}.webp`;
 }
 
 function getPersonKey(name) {
