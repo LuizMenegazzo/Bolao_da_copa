@@ -507,40 +507,40 @@ async function loadCurrentGameData() {
 }
 
 function renderCurrentGame() {
-  const currentMatch = getLatestUpdatedMatch();
+  const currentBlock = getLatestUpdatedMatchBlock();
+  const currentMatches = currentBlock.matches;
 
-  if (!currentMatch) {
+  if (!currentMatches.length) {
     currentGameContent.innerHTML = '<p class="empty-state">Ainda não há nenhum placar oficial atualizado.</p>';
     return;
   }
 
-  const currentResult = results[currentMatch.id];
   const ranking = calculateRankingWithMovement(getScoredMatches());
   const participants = ranking.map((entry) => {
-    const detail = entry.details.find((scoreDetail) => scoreDetail.match.id === currentMatch.id);
+    const currentDetails = currentMatches
+      .map((match) => entry.details.find((scoreDetail) => scoreDetail.match.id === match.id))
+      .filter(Boolean);
 
     return {
       ...entry,
-      currentDetail: detail
+      currentDetails,
+      currentDetail: currentDetails[0]
     };
   });
   const chibiContext = createChibiContext(participants);
-  const updatedAt = currentResult.updatedAt ? formatDate(currentResult.updatedAt) : "Horário não informado";
+  const updatedAt = currentBlock.updatedAt ? formatDate(currentBlock.updatedAt) : "Horário não informado";
+  const blockLabel = currentMatches.length > 1
+    ? `${currentMatches[0].dateLabel} • ${currentMatches[0].time} • ${currentMatches.length} jogos simultâneos`
+    : `${currentMatches[0].dateLabel} • ${currentMatches[0].time} • Grupo ${currentMatches[0].group}`;
 
   currentGameContent.innerHTML = `
     <section class="current-match-hero">
       <div class="current-match-meta">
-        <span class="live-pill">⚽ Último placar atualizado</span>
-        <span>${currentMatch.dateLabel} • ${currentMatch.time} • Grupo ${currentMatch.group}</span>
+        <span class="live-pill">⚽ Último bloco atualizado</span>
+        <span>${blockLabel}</span>
       </div>
-      <div class="current-match-scoreboard">
-        <div class="current-match-team home">${formatTeamNameImage(currentMatch.home)}</div>
-        <div class="current-match-score">
-          <strong>${currentResult.homeScore}</strong>
-          <span>x</span>
-          <strong>${currentResult.awayScore}</strong>
-        </div>
-        <div class="current-match-team away">${formatTeamNameImage(currentMatch.away)}</div>
+      <div class="current-match-scoreboards">
+        ${currentMatches.map((match) => renderCurrentMatchScoreboard(match)).join("")}
       </div>
       <small>Atualizado em ${escapeHtml(updatedAt)}</small>
     </section>
@@ -560,11 +560,27 @@ function renderCurrentGame() {
   `;
 }
 
+function renderCurrentMatchScoreboard(match) {
+  const result = results[match.id];
+
+  return `
+    <article class="current-match-scoreboard">
+      <div class="current-match-team home">${formatTeamNameImage(match.home)}</div>
+      <div class="current-match-score">
+        <strong>${result.homeScore}</strong>
+        <span>x</span>
+        <strong>${result.awayScore}</strong>
+      </div>
+      <div class="current-match-team away">${formatTeamNameImage(match.away)}</div>
+      <small>${match.dateLabel} • ${match.time} • Grupo ${match.group}</small>
+    </article>
+  `;
+}
+
 function renderCurrentParticipant(entry, chibiContext) {
-  const detail = entry.currentDetail;
-  const prediction = detail?.prediction;
-  const points = detail?.points || 0;
-  const type = detail?.type || "none";
+  const details = entry.currentDetails?.length ? entry.currentDetails : [entry.currentDetail].filter(Boolean);
+  const points = details.reduce((sum, detail) => sum + detail.points, 0);
+  const type = getCurrentBlockScoreType(details);
 
   return `
     <article class="current-participant-card ${type}">
@@ -576,15 +592,15 @@ function renderCurrentParticipant(entry, chibiContext) {
         ${renderChibiAvatar(entry.playerName, "current-game-chibi", entry, chibiContext)}
         <div>
           <strong>${escapeHtml(entry.playerName)}</strong>
-          <span>${SCORE_LABELS[type]}</span>
+          <span>${getCurrentBlockScoreLabel(details, type)}</span>
         </div>
       </div>
       <div class="current-prediction">
-        <span>Palpite</span>
-        <strong>${formatPrediction(prediction)}</strong>
+        <span>${details.length > 1 ? "Palpites" : "Palpite"}</span>
+        <strong>${formatCurrentBlockPredictions(details)}</strong>
       </div>
       <div class="current-game-points ${points < 0 ? "negative" : ""}">
-        <span>Neste jogo</span>
+        <span>${details.length > 1 ? "Neste bloco" : "Neste jogo"}</span>
         <strong>${points > 0 ? "+" : ""}${points} pts</strong>
       </div>
       <div class="current-total-points">
@@ -593,6 +609,48 @@ function renderCurrentParticipant(entry, chibiContext) {
       </div>
     </article>
   `;
+}
+
+function getCurrentBlockScoreType(details) {
+  if (!details.length) {
+    return "none";
+  }
+
+  if (details.some((detail) => detail.type === "inverted")) {
+    return "inverted";
+  }
+
+  if (details.some((detail) => detail.type === "complete")) {
+    return "complete";
+  }
+
+  if (details.every((detail) => detail.type === "none")) {
+    return "none";
+  }
+
+  if (details.some((detail) => detail.type === "intermediate")) {
+    return "intermediate";
+  }
+
+  return "basic";
+}
+
+function getCurrentBlockScoreLabel(details, type) {
+  if (details.length <= 1) {
+    return SCORE_LABELS[type];
+  }
+
+  return `${details.length} jogos no bloco`;
+}
+
+function formatCurrentBlockPredictions(details) {
+  if (!details.length) {
+    return "Sem palpite";
+  }
+
+  return details
+    .map((detail) => `${detail.match.home} ${formatPrediction(detail.prediction)} ${detail.match.away}`)
+    .join(" • ");
 }
 
 async function fetchCartelas() {
@@ -1031,14 +1089,15 @@ function calculateRanking(scoredMatches) {
 
 function calculateRankingWithMovement(scoredMatches) {
   const currentRanking = calculateRanking(scoredMatches);
-  const latestMatch = getLatestUpdatedMatch();
+  const latestBlock = getLatestUpdatedMatchBlock(scoredMatches);
 
-  if (!latestMatch || scoredMatches.length < 2) {
+  if (!latestBlock.matches.length || scoredMatches.length <= latestBlock.matches.length) {
     return currentRanking.map((entry) => ({ ...entry, movement: 0 }));
   }
 
+  const latestBlockIds = new Set(latestBlock.matches.map((match) => match.id));
   const previousRanking = calculateRanking(
-    scoredMatches.filter((match) => match.id !== latestMatch.id)
+    scoredMatches.filter((match) => !latestBlockIds.has(match.id))
   );
   const previousRanks = new Map(previousRanking.map((entry) => [entry.id, entry.rank]));
 
@@ -1166,16 +1225,42 @@ function getScoredMatches() {
 }
 
 function getLatestUpdatedMatch() {
-  return getScoredMatches().reduce((latestMatch, match) => {
-    if (!latestMatch) {
+  return getLatestUpdatedMatchBlock().latestMatch;
+}
+
+function getLatestUpdatedMatchBlock(scoredMatches = getScoredMatches()) {
+  const latestMatch = scoredMatches.reduce((currentLatestMatch, match) => {
+    if (!currentLatestMatch) {
       return match;
     }
 
     const currentUpdatedAt = Date.parse(results[match.id]?.updatedAt || "") || 0;
-    const latestUpdatedAt = Date.parse(results[latestMatch.id]?.updatedAt || "") || 0;
+    const latestUpdatedAt = Date.parse(results[currentLatestMatch.id]?.updatedAt || "") || 0;
 
-    return currentUpdatedAt >= latestUpdatedAt ? match : latestMatch;
+    return currentUpdatedAt >= latestUpdatedAt ? match : currentLatestMatch;
   }, null);
+
+  if (!latestMatch) {
+    return { latestMatch: null, matches: [], updatedAt: null };
+  }
+
+  const latestBlockKey = getMatchBlockKey(latestMatch);
+  const matches = scoredMatches.filter((match) => getMatchBlockKey(match) === latestBlockKey);
+  const updatedAt = matches.reduce((latestUpdatedAt, match) => {
+    const matchUpdatedAt = Date.parse(results[match.id]?.updatedAt || "") || 0;
+
+    return matchUpdatedAt > latestUpdatedAt ? matchUpdatedAt : latestUpdatedAt;
+  }, 0);
+
+  return {
+    latestMatch,
+    matches,
+    updatedAt: updatedAt ? new Date(updatedAt).toISOString() : results[latestMatch.id]?.updatedAt || null
+  };
+}
+
+function getMatchBlockKey(match) {
+  return `${match.dateLabel || ""}|${match.time || ""}`;
 }
 
 function getUpcomingMatches() {
@@ -1777,8 +1862,8 @@ function formatPrediction(prediction) {
 }
 
 function createChibiContext(entries = []) {
-  const latestMatch = getLatestUpdatedMatch();
-  const latestMatchId = latestMatch?.id || null;
+  const latestBlock = getLatestUpdatedMatchBlock();
+  const latestMatchIds = latestBlock.matches.map((match) => match.id);
   const orderedEntries = [...entries];
   const mateKeysInSequence = new Set();
   const tableIndexByKey = new Map();
@@ -1819,7 +1904,7 @@ function createChibiContext(entries = []) {
   flushMateRun();
 
   return {
-    latestMatchId,
+    latestMatchIds,
     coupleChibiByKey,
     mateKeysInSequence,
     tableIndexByKey,
@@ -1864,14 +1949,14 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
     return null;
   }
 
-  const currentPoints = getCurrentGamePoints(entry, chibiContext);
+  const currentBlockPoints = getCurrentBlockPoints(entry, chibiContext);
   const coupleChibi = chibiContext?.coupleChibiByKey?.get(key);
 
   if (coupleChibi) {
     return coupleChibi;
   }
 
-  if (currentPoints === 10) {
+  if (currentBlockPoints.some((points) => points === 10)) {
     return getChibiVariant(defaultChibi, "especial");
   }
 
@@ -1879,7 +1964,7 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
     return getChibiVariant(defaultChibi, "mate");
   }
 
-  if (key === "GABRIEL" && currentPoints === -2) {
+  if (key === "GABRIEL" && currentBlockPoints.some((points) => points === -2)) {
     return "gabriel_2_especial.webp";
   }
 
@@ -1902,15 +1987,15 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
     }
   }
 
-  if (isBottomThree(entry, chibiContext) || currentPoints === -2) {
+  if (isBottomThree(entry, chibiContext) || currentBlockPoints.some((points) => points === -2)) {
     return getChibiVariant(defaultChibi, "triste");
   }
 
-  if (currentPoints === 6 || currentPoints === 5) {
+  if (currentBlockPoints.length && currentBlockPoints.every((points) => points === 6 || points === 5)) {
     return getChibiVariant(defaultChibi, "feliz");
   }
 
-  if (currentPoints === 0) {
+  if (currentBlockPoints.length) {
     return getChibiVariant(defaultChibi, "neutro");
   }
 
@@ -1918,17 +2003,28 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
 }
 
 function getCurrentGamePoints(entry, chibiContext) {
-  if (!entry || !chibiContext?.latestMatchId) {
+  const blockPoints = getCurrentBlockPoints(entry, chibiContext);
+
+  if (!blockPoints.length) {
     return null;
   }
 
-  const currentDetail = entry.currentDetail || entry.details?.find((detail) => detail.match.id === chibiContext.latestMatchId);
+  return blockPoints.reduce((sum, points) => sum + points, 0);
+}
 
-  if (!currentDetail || !Number.isFinite(Number(currentDetail.points))) {
-    return null;
+function getCurrentBlockPoints(entry, chibiContext) {
+  if (!entry || !chibiContext?.latestMatchIds?.length) {
+    return [];
   }
 
-  return Number(currentDetail.points);
+  const latestMatchIds = new Set(chibiContext.latestMatchIds);
+  const currentDetails = entry.currentDetails?.length
+    ? entry.currentDetails
+    : entry.details?.filter((detail) => latestMatchIds.has(detail.match.id));
+
+  return (currentDetails || [])
+    .map((detail) => Number(detail.points))
+    .filter((points) => Number.isFinite(points));
 }
 
 function isBottomThree(entry, chibiContext) {

@@ -231,6 +231,25 @@ button {
   gap: 24px;
 }
 
+.current-match-scoreboards {
+  display: grid;
+  gap: 14px;
+}
+
+.current-match-scoreboards .current-match-scoreboard {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.current-match-scoreboard > small {
+  grid-column: 1 / -1;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
+  text-align: center;
+}
+
 .current-match-team {
   font-size: clamp(1.35rem, 3vw, 2.35rem);
   font-weight: 950;
@@ -432,6 +451,11 @@ button {
   display: block;
   margin-top: 3px;
   font-size: 1.15rem;
+}
+
+.current-prediction strong {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .current-game-points {
