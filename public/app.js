@@ -565,13 +565,13 @@ function renderCurrentMatchScoreboard(match) {
 
   return `
     <article class="current-match-scoreboard">
-      <div class="current-match-team home">${formatTeamNameImage(match.home)}</div>
+      <div class="current-match-team current-match-flag-team home">${formatTeamFlagOnly(match.home)}</div>
       <div class="current-match-score">
         <strong>${result.homeScore}</strong>
         <span>x</span>
         <strong>${result.awayScore}</strong>
       </div>
-      <div class="current-match-team away">${formatTeamNameImage(match.away)}</div>
+      <div class="current-match-team current-match-flag-team away">${formatTeamFlagOnly(match.away)}</div>
       <small>${match.dateLabel} • ${match.time} • Grupo ${match.group}</small>
     </article>
   `;
@@ -646,6 +646,10 @@ function getCurrentBlockScoreLabel(details, type) {
 function formatCurrentBlockPredictions(details) {
   if (!details.length) {
     return "Sem palpite";
+  }
+
+  if (details.length > 1) {
+    return details.map((detail) => formatPrediction(detail.prediction)).join(" • ");
   }
 
   return details
@@ -2076,6 +2080,35 @@ function formatTeamNameImage(teamName) {
     <span class="team-with-flag">
       ${flag}
       <span>${safeTeamName}</span>
+    </span>
+  `;
+}
+
+function formatTeamFlagOnly(teamName) {
+  const teamKey = getTeamKey(teamName);
+  const flagCode = TEAM_FLAG_CODES[teamKey];
+  const safeTeamName = escapeHtml(teamName);
+
+  if (!flagCode) {
+    return `
+      <span class="current-match-flag-only current-match-flag-fallback" title="${safeTeamName}">
+        ${getInitials(teamName)}
+        <span class="visually-hidden">${safeTeamName}</span>
+      </span>
+    `;
+  }
+
+  return `
+    <span class="current-match-flag-only" title="${safeTeamName}">
+      <img
+        src="https://flagcdn.com/w160/${flagCode}.png"
+        srcset="https://flagcdn.com/w320/${flagCode}.png 2x"
+        alt="Bandeira: ${safeTeamName}"
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+      />
+      <span class="visually-hidden">${safeTeamName}</span>
     </span>
   `;
 }

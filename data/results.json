@@ -1,10 +1,272 @@
-﻿{
+{
   "A-01": {
     "homeScore": 2,
     "awayScore": 0,
     "updatedAt": "2026-06-11T20:38:16.226Z"
+  },
+  "A-02": {
+    "homeScore": 2,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "B-01": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "D-01": {
+    "homeScore": 4,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "B-02": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "C-01": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "C-02": {
+    "homeScore": 0,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "D-02": {
+    "homeScore": 2,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "E-01": {
+    "homeScore": 7,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "F-01": {
+    "homeScore": 2,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "E-02": {
+    "homeScore": 1,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "F-02": {
+    "homeScore": 5,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "H-01": {
+    "homeScore": 0,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "G-01": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "H-02": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "G-02": {
+    "homeScore": 2,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "I-01": {
+    "homeScore": 3,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "I-02": {
+    "homeScore": 1,
+    "awayScore": 4,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "J-01": {
+    "homeScore": 3,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "J-02": {
+    "homeScore": 3,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "K-01": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "L-01": {
+    "homeScore": 4,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "L-02": {
+    "homeScore": 1,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "K-02": {
+    "homeScore": 1,
+    "awayScore": 3,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "A-03": {
+    "homeScore": 1,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "B-03": {
+    "homeScore": 4,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "B-04": {
+    "homeScore": 6,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "A-04": {
+    "homeScore": 1,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "D-03": {
+    "homeScore": 2,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "C-03": {
+    "homeScore": 0,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "C-04": {
+    "homeScore": 3,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "D-04": {
+    "homeScore": 0,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "F-03": {
+    "homeScore": 5,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "E-03": {
+    "homeScore": 2,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "E-04": {
+    "homeScore": 0,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "F-04": {
+    "homeScore": 0,
+    "awayScore": 4,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "H-03": {
+    "homeScore": 4,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "G-03": {
+    "homeScore": 0,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "H-04": {
+    "homeScore": 2,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "G-04": {
+    "homeScore": 1,
+    "awayScore": 3,
+    "updatedAt": "2026-06-25T19:11:02.678Z"
+  },
+  "J-03": {
+    "homeScore": 2,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "I-03": {
+    "homeScore": 3,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "I-04": {
+    "homeScore": 3,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "J-04": {
+    "homeScore": 1,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "K-03": {
+    "homeScore": 5,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "L-03": {
+    "homeScore": 0,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "L-04": {
+    "homeScore": 0,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "K-04": {
+    "homeScore": 1,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "B-06": {
+    "homeScore": 3,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "B-05": {
+    "homeScore": 2,
+    "awayScore": 1,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "C-05": {
+    "homeScore": 4,
+    "awayScore": 2,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "C-06": {
+    "homeScore": 0,
+    "awayScore": 3,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "A-06": {
+    "homeScore": 0,
+    "awayScore": 3,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
+  },
+  "A-05": {
+    "homeScore": 1,
+    "awayScore": 0,
+    "updatedAt": "2026-06-25T19:11:02.679Z"
   }
 }
-
-
-
