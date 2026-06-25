@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light;
+  color-scheme: only light;
   --bg: #f5f3ff;
   --card: rgba(255, 255, 255, 0.88);
   --card-strong: #ffffff;
@@ -26,6 +26,10 @@ body {
     radial-gradient(circle at top left, rgba(25, 195, 125, 0.25), transparent 34rem),
     radial-gradient(circle at top right, rgba(102, 56, 240, 0.28), transparent 38rem),
     linear-gradient(135deg, #f7f3ff 0%, #eef8ff 100%);
+}
+
+html {
+  color-scheme: only light;
 }
 
 button,
@@ -502,6 +506,39 @@ button {
 .current-prediction strong {
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+.current-block-predictions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.current-prediction-match {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.prediction-flag {
+  width: 20px;
+  height: 14px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #eef0f7;
+  box-shadow: 0 0 0 1px rgba(47, 28, 110, 0.14);
+}
+
+.prediction-flag-fallback {
+  display: inline-grid;
+  place-items: center;
+  color: var(--primary-dark);
+  font-size: 0.58rem;
+  font-weight: 950;
 }
 
 .current-game-points {

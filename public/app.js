@@ -648,13 +648,17 @@ function formatCurrentBlockPredictions(details) {
     return "Sem palpite";
   }
 
-  if (details.length > 1) {
-    return details.map((detail) => formatPrediction(detail.prediction)).join(" • ");
-  }
-
-  return details
-    .map((detail) => `${detail.match.home} ${formatPrediction(detail.prediction)} ${detail.match.away}`)
-    .join(" • ");
+  return `
+    <span class="current-block-predictions">
+      ${details.map((detail) => `
+        <span class="current-prediction-match">
+          ${formatTeamFlagTiny(detail.match.home)}
+          <span>${formatPrediction(detail.prediction)}</span>
+          ${formatTeamFlagTiny(detail.match.away)}
+        </span>
+      `).join("")}
+    </span>
+  `;
 }
 
 async function fetchCartelas() {
@@ -2110,6 +2114,28 @@ function formatTeamFlagOnly(teamName) {
       />
       <span class="visually-hidden">${safeTeamName}</span>
     </span>
+  `;
+}
+
+function formatTeamFlagTiny(teamName) {
+  const teamKey = getTeamKey(teamName);
+  const flagCode = TEAM_FLAG_CODES[teamKey];
+  const safeTeamName = escapeHtml(teamName);
+
+  if (!flagCode) {
+    return `<span class="prediction-flag prediction-flag-fallback" title="${safeTeamName}">${getInitials(teamName)}</span>`;
+  }
+
+  return `
+    <img
+      class="prediction-flag"
+      src="https://flagcdn.com/w40/${flagCode}.png"
+      srcset="https://flagcdn.com/w80/${flagCode}.png 2x"
+      alt="Bandeira: ${safeTeamName}"
+      loading="lazy"
+      decoding="async"
+      referrerpolicy="no-referrer"
+    />
   `;
 }
 
