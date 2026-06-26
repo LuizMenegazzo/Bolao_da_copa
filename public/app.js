@@ -167,7 +167,7 @@ const PLAYER_CHIBIS = {
   "VINICIUS": "vinicius.webp"
 };
 
-const CHIBI_ASSET_VERSION = "2026-06-23-2";
+const CHIBI_ASSET_VERSION = "2026-06-26-1";
 const MATE_CHIBI_KEYS = new Set(["AMANDINHA", "CARLA", "CRICIELE", "CRIS", "LAURA", "THIELI"]);
 const COUPLE_CHIBIS = [
   { keys: ["LUIZ", "AMANDINHA"], file: "luiz_amandinha.webp" },
@@ -175,7 +175,10 @@ const COUPLE_CHIBIS = [
   { keys: ["ANDERSON", "CELSO"], file: "celso_anderson.webp" },
   { keys: ["CARLA", "LUCAS"], file: "carla_lucas.webp" },
   { keys: ["CRICIELE", "VINICIUS"], file: "criciele_vinicius.webp" },
-  { keys: ["LAURA", "DANIEL"], file: "laura_daniel.webp" }
+  { keys: ["LAURA", "DANIEL"], file: "laura_daniel.webp" },
+  { keys: ["GABRIEL", "JOAO LAURO"], file: "gabriel_joao-lauro.webp" },
+  { keys: ["CRIS", "PC"], file: "cris_pc.webp" },
+  { keys: ["LUCAS", "VINICIUS"], file: "lucas_vinicius.webp" }
 ];
 
 let groups = [];
