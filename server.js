@@ -636,6 +636,29 @@ async function handleApiRequest(request, response, pathname) {
       return;
     }
 
+    if (request.method === "GET" && pathname === "/api/knockout/admin/passwords") {
+      if (!requireAdmin(request, response)) {
+        return;
+      }
+
+      const playersByKey = await storage.getKnockoutPlayers();
+
+      sendJson(response, 200, {
+        players: getPublicKnockoutPlayers(playersByKey).map((player) => {
+          const savedPlayer = playersByKey[player.playerKey];
+
+          return {
+            ...player,
+            passwordStatus: player.hasPassword ? "Senha criada e protegida" : "Sem senha",
+            password: player.hasPassword ? "Não é possível exibir: senha salva com hash" : "",
+            createdAt: savedPlayer?.createdAt,
+            updatedAt: savedPlayer?.updatedAt
+          };
+        })
+      });
+      return;
+    }
+
     if (request.method === "POST" && pathname === "/api/cartelas") {
       const payload = await readRequestBody(request);
       const validation = validateCartela(payload);

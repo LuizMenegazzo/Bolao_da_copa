@@ -34,6 +34,8 @@
         </button>
       </section>
 
+      <button class="admin-entry-button" type="button" data-screen="knockout-admin">Admin</button>
+
       <section id="home-screen" class="panel home-panel hidden">
         <button class="main-action secondary-action compact-action" type="button" id="back-season-menu">
           <span>Voltar ao início</span>
@@ -104,6 +106,21 @@
 
         <div id="knockout-prediction-content" class="knockout-prediction-content" aria-live="polite">
           <p class="empty-state">Carregando participantes e jogos do mata-mata...</p>
+        </div>
+      </section>
+
+      <section id="knockout-admin-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Admin mata-mata</p>
+            <h2>Senhas das cartelas</h2>
+            <p>Veja quem já criou senha para palpitar no mata-mata.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-season-menu-admin">Voltar</button>
+        </div>
+
+        <div id="knockout-admin-content" class="knockout-admin-content" aria-live="polite">
+          <p class="empty-state">Carregando status das senhas...</p>
         </div>
       </section>
 

@@ -2,6 +2,7 @@ const seasonMenuScreen = document.querySelector("#season-menu-screen");
 const homeScreen = document.querySelector("#home-screen");
 const knockoutFollowScreen = document.querySelector("#knockout-follow-screen");
 const knockoutPredictionsScreen = document.querySelector("#knockout-predictions-screen");
+const knockoutAdminScreen = document.querySelector("#knockout-admin-screen");
 const currentGameScreen = document.querySelector("#current-game-screen");
 const addCardScreen = document.querySelector("#add-card-screen");
 const updateScoresScreen = document.querySelector("#update-scores-screen");
@@ -40,6 +41,7 @@ const knockoutRankingList = document.querySelector("#knockout-ranking-list");
 const knockoutCurrentTab = document.querySelector("#knockout-current-tab");
 const knockoutRankingTab = document.querySelector("#knockout-ranking-tab");
 const knockoutPredictionContent = document.querySelector("#knockout-prediction-content");
+const knockoutAdminContent = document.querySelector("#knockout-admin-content");
 
 const ADMIN_PASSWORD_KEY = "bolaoAdminPassword";
 
@@ -261,6 +263,15 @@ document.querySelector('[data-screen="knockout-predictions"]').addEventListener(
   await loadKnockoutPredictionData();
 });
 
+document.querySelector('[data-screen="knockout-admin"]').addEventListener("click", async () => {
+  if (!(await requireAdminPassword())) {
+    return;
+  }
+
+  showScreen(knockoutAdminScreen);
+  await loadKnockoutAdminData();
+});
+
 document.querySelector('[data-screen="current-game"]').addEventListener("click", async () => {
   showScreen(currentGameScreen);
   await loadCurrentGameData();
@@ -312,6 +323,10 @@ document.querySelector("#back-season-menu-knockout").addEventListener("click", (
 });
 
 document.querySelector("#back-season-menu-predictions").addEventListener("click", () => {
+  showScreen(seasonMenuScreen);
+});
+
+document.querySelector("#back-season-menu-admin").addEventListener("click", () => {
   showScreen(seasonMenuScreen);
 });
 
@@ -655,6 +670,63 @@ async function loadKnockoutPredictionData() {
   } catch (error) {
     knockoutPredictionContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
   }
+}
+
+async function loadKnockoutAdminData() {
+  knockoutAdminContent.innerHTML = '<p class="empty-state">Carregando status das senhas...</p>';
+
+  try {
+    const response = await fetch("/api/knockout/admin/passwords", {
+      headers: getAdminHeaders()
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAdminPassword();
+      }
+
+      throw new Error(data.error || "Não foi possível carregar o admin.");
+    }
+
+    renderKnockoutAdminPasswords(data.players || []);
+  } catch (error) {
+    knockoutAdminContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderKnockoutAdminPasswords(players) {
+  const createdCount = players.filter((player) => player.hasPassword).length;
+
+  knockoutAdminContent.innerHTML = `
+    <div class="ranking-summary">
+      <article class="summary-card">
+        <span>🔐 Senhas criadas</span>
+        <strong>${createdCount}</strong>
+      </article>
+      <article class="summary-card">
+        <span>📝 Pendentes</span>
+        <strong>${players.length - createdCount}</strong>
+      </article>
+    </div>
+
+    <p class="admin-note">
+      As senhas não aparecem em texto puro porque são salvas protegidas por hash. Se alguém esquecer, o caminho seguro é redefinir a senha.
+    </p>
+
+    <div class="admin-password-list">
+      ${players.map((player) => `
+        <article class="admin-password-card ${player.hasPassword ? "ready" : "pending"}">
+          ${renderChibiAvatar(player.playerName, "admin-password-chibi")}
+          <div>
+            <strong>${escapeHtml(player.playerName)}</strong>
+            <span>${player.hasPassword ? "Senha criada" : "Ainda sem senha"}</span>
+            <small>${escapeHtml(player.password || "Aguardando primeiro acesso")}</small>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderKnockoutFollowDashboard() {
@@ -2396,6 +2468,7 @@ function showScreen(screen) {
   homeScreen.classList.toggle("hidden", screen !== homeScreen);
   knockoutFollowScreen.classList.toggle("hidden", screen !== knockoutFollowScreen);
   knockoutPredictionsScreen.classList.toggle("hidden", screen !== knockoutPredictionsScreen);
+  knockoutAdminScreen.classList.toggle("hidden", screen !== knockoutAdminScreen);
   currentGameScreen.classList.toggle("hidden", screen !== currentGameScreen);
   addCardScreen.classList.toggle("hidden", screen !== addCardScreen);
   updateScoresScreen.classList.toggle("hidden", screen !== updateScoresScreen);

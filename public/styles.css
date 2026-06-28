@@ -154,6 +154,20 @@ button {
   line-height: 1.5;
 }
 
+.admin-entry-button {
+  display: block;
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 8px 14px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 900;
+  box-shadow: 0 8px 22px rgba(47, 28, 110, 0.08);
+}
+
 .secondary-action {
   color: var(--text);
   background: var(--card-strong);
@@ -685,6 +699,72 @@ button {
 
 .knockout-password-field {
   margin: 0;
+}
+
+.knockout-admin-content {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-note {
+  margin: 0;
+  padding: 14px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #f8f6ff;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.admin-password-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-password-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 5px solid #d9d5e8;
+  border-radius: 18px;
+  background: white;
+}
+
+.admin-password-card.ready {
+  border-left-color: var(--accent);
+}
+
+.admin-password-card.pending {
+  border-left-color: #f2b84b;
+}
+
+.admin-password-card strong,
+.admin-password-card span,
+.admin-password-card small {
+  display: block;
+}
+
+.admin-password-card strong {
+  font-size: 1.05rem;
+}
+
+.admin-password-card span {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.admin-password-card small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.admin-password-chibi {
+  width: 58px;
+  height: 58px;
 }
 
 .section-header {
