@@ -855,9 +855,26 @@ function renderKnockoutMatchScoreboard(match) {
         <strong>${hasResult ? result.awayScore : "—"}</strong>
       </div>
       <div class="current-match-team current-match-flag-team away">${formatTeamFlagOnly(match.away)}</div>
-      <small>${formatKnockoutDate(match)} • ${formatKnockoutTime(match)} • ${hasResult ? "Mata-mata" : "Aguardando placar"}</small>
+      <small>${formatKnockoutDate(match)} • ${formatKnockoutTime(match)} • ${hasResult ? getKnockoutResultLabel(match) : "Aguardando placar"}</small>
     </article>
   `;
+}
+
+function getKnockoutResultLabel(match) {
+  const result = knockoutResults[match.id];
+
+  if (!result || !isKnockoutDecidedAfterRegulation(match, result)) {
+    return "Mata-mata";
+  }
+
+  const winnerName = escapeHtml(match.winnerSide === "home" ? match.home : match.away);
+  const hasShootout = Number.isInteger(match.homeShootoutScore) && Number.isInteger(match.awayShootoutScore);
+
+  if (hasShootout) {
+    return `Passou ${winnerName} nos pênaltis (${match.homeShootoutScore}x${match.awayShootoutScore})`;
+  }
+
+  return `Passou ${winnerName} na prorrogação`;
 }
 
 function renderKnockoutRanking() {
@@ -993,6 +1010,7 @@ function renderKnockoutPredictionEditor() {
 function renderKnockoutPredictionMatch(match, prediction) {
   const lockInfo = match.lock || getKnockoutLockInfo(match);
   const hasPrediction = Number.isInteger(prediction?.homeScore) && Number.isInteger(prediction?.awayScore);
+  const selectedAdvanceSide = prediction?.advanceSide || "";
 
   return `
     <article class="upcoming-prediction-card knockout-prediction-match ${lockInfo.locked ? "locked" : ""}" data-knockout-match-row="${match.id}">
@@ -1009,6 +1027,19 @@ function renderKnockoutPredictionMatch(match, prediction) {
         <input class="score-input knockout-score-input" type="number" inputmode="numeric" min="0" max="99" data-knockout-match-id="${match.id}" data-side="homeScore" value="${hasPrediction ? prediction.homeScore : ""}" ${lockInfo.locked ? "disabled" : ""} />
         <span>x</span>
         <input class="score-input knockout-score-input" type="number" inputmode="numeric" min="0" max="99" data-knockout-match-id="${match.id}" data-side="awayScore" value="${hasPrediction ? prediction.awayScore : ""}" ${lockInfo.locked ? "disabled" : ""} />
+      </div>
+      <div class="knockout-advance-picker">
+        <span>Se empatar, quem passa?</span>
+        <label>
+          <input type="radio" name="advance-${escapeHtml(match.id)}" value="home" data-side="advanceSide" ${selectedAdvanceSide === "home" ? "checked" : ""} ${lockInfo.locked ? "disabled" : ""} />
+          ${formatTeamFlagTiny(match.home)}
+          <strong>${escapeHtml(match.home)}</strong>
+        </label>
+        <label>
+          <input type="radio" name="advance-${escapeHtml(match.id)}" value="away" data-side="advanceSide" ${selectedAdvanceSide === "away" ? "checked" : ""} ${lockInfo.locked ? "disabled" : ""} />
+          ${formatTeamFlagTiny(match.away)}
+          <strong>${escapeHtml(match.away)}</strong>
+        </label>
       </div>
       <button class="save-button knockout-save-button" type="button" data-knockout-save-match="${match.id}" ${lockInfo.locked ? "disabled" : ""}>
         ${hasPrediction ? "Modificar palpite" : "Confirmar palpite"}
@@ -1092,11 +1123,18 @@ async function saveKnockoutPrediction(matchId) {
   const row = knockoutPredictionContent.querySelector(`[data-knockout-match-row="${CSS.escape(matchId)}"]`);
   const homeInput = row?.querySelector('[data-side="homeScore"]');
   const awayInput = row?.querySelector('[data-side="awayScore"]');
+  const advanceInput = row?.querySelector('[data-side="advanceSide"]:checked');
   const homeScore = Number(homeInput?.value);
   const awayScore = Number(awayInput?.value);
+  const advanceSide = advanceInput?.value || "";
 
   if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
     showToast("Preencha um placar válido.");
+    return;
+  }
+
+  if (!["home", "away"].includes(advanceSide)) {
+    showToast("Escolha quem passa se o jogo for para prorrogação ou pênaltis.");
     return;
   }
 
@@ -1108,7 +1146,7 @@ async function saveKnockoutPrediction(matchId) {
         playerName: activeKnockoutPlayer.playerName,
         password: activeKnockoutPassword,
         predictions: {
-          [matchId]: { homeScore, awayScore }
+          [matchId]: { homeScore, awayScore, advanceSide }
         }
       })
     });
@@ -1165,12 +1203,16 @@ function scoreKnockoutPlayer(player, scoredMatches) {
     const prediction = playerPredictionData[match.id] || { homeScore: 0, awayScore: 0 };
     const result = knockoutResults[match.id];
     const score = scorePrediction(prediction, result);
+    const advancePoints = scoreAdvancePrediction(prediction, match, result);
 
     return {
       match,
       prediction,
       result,
-      ...score
+      ...score,
+      basePoints: score.points,
+      advancePoints,
+      points: score.points + advancePoints
     };
   });
 
@@ -1188,6 +1230,21 @@ function scoreKnockoutPlayer(player, scoredMatches) {
     },
     details
   };
+}
+
+function scoreAdvancePrediction(prediction, match, result) {
+  if (!isKnockoutDecidedAfterRegulation(match, result)) {
+    return 0;
+  }
+
+  return prediction?.advanceSide === match.winnerSide ? 2 : 0;
+}
+
+function isKnockoutDecidedAfterRegulation(match, result) {
+  return (
+    getOutcome(Number(result.homeScore), Number(result.awayScore)) === "draw" &&
+    ["home", "away"].includes(match.winnerSide)
+  );
 }
 
 function getScoredKnockoutMatches() {
@@ -1491,10 +1548,12 @@ function getCurrentBlockScoreType(details) {
 
 function getCurrentBlockScoreLabel(details, type) {
   if (details.length <= 1) {
-    return SCORE_LABELS[type];
+    const bonus = details[0]?.advancePoints || 0;
+    return bonus ? `${SCORE_LABELS[type]} + bônus` : SCORE_LABELS[type];
   }
 
-  return `${details.length} jogos no bloco`;
+  const bonus = details.reduce((sum, detail) => sum + (detail.advancePoints || 0), 0);
+  return bonus ? `${details.length} jogos no bloco • +${bonus} bônus` : `${details.length} jogos no bloco`;
 }
 
 function formatCurrentBlockPredictions(details) {
@@ -1507,12 +1566,21 @@ function formatCurrentBlockPredictions(details) {
       ${details.map((detail) => `
         <span class="current-prediction-match">
           ${formatTeamFlagTiny(detail.match.home)}
-          <span>${formatPrediction(detail.prediction)}</span>
+          <span>${formatPrediction(detail.prediction)}${formatAdvancePrediction(detail.prediction, detail.match)}</span>
           ${formatTeamFlagTiny(detail.match.away)}
         </span>
       `).join("")}
     </span>
   `;
+}
+
+function formatAdvancePrediction(prediction, match) {
+  if (!["home", "away"].includes(prediction?.advanceSide)) {
+    return "";
+  }
+
+  const teamName = prediction.advanceSide === "home" ? match.home : match.away;
+  return ` • passa ${escapeHtml(teamName)}`;
 }
 
 async function fetchCartelas() {
@@ -2902,7 +2970,7 @@ function getCurrentBlockPoints(entry, chibiContext) {
     : entry.details?.filter((detail) => latestMatchIds.has(detail.match.id));
 
   return (currentDetails || [])
-    .map((detail) => Number(detail.points))
+    .map((detail) => Number(detail.basePoints ?? detail.points))
     .filter((points) => Number.isFinite(points));
 }
 

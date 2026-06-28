@@ -12,6 +12,9 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ESPN_SCOREBOARD_BASE_URL =
   process.env.ESPN_SCOREBOARD_URL ||
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const ESPN_SUMMARY_BASE_URL =
+  process.env.ESPN_SUMMARY_URL ||
+  "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary";
 const KNOCKOUT_FETCH_DAYS = Number(process.env.KNOCKOUT_FETCH_DAYS || 30);
 
 const KNOCKOUT_PLAYERS = [
@@ -158,8 +161,10 @@ async function fetchEspnKnockoutMatches() {
   }));
 
   const events = eventLists.flat();
+  const matches = events.map(mapEspnKnockoutMatch).filter(Boolean);
+  const enrichedMatches = await Promise.all(matches.map(enrichKnockoutMatchFromSummary));
 
-  return events.map(mapEspnKnockoutMatch).filter(Boolean);
+  return enrichedMatches;
 }
 
 function mapEspnKnockoutMatch(event) {
@@ -182,6 +187,8 @@ function mapEspnKnockoutMatch(event) {
   const status = event.status?.type || competition.status?.type || {};
   const homeScore = Number(homeCompetitor.score);
   const awayScore = Number(awayCompetitor.score);
+  const homeShootoutScore = Number(homeCompetitor.shootoutScore);
+  const awayShootoutScore = Number(awayCompetitor.shootoutScore);
 
   return {
     id: `espn-${event.id}`,
@@ -193,9 +200,83 @@ function mapEspnKnockoutMatch(event) {
     status: status.description || status.detail || "",
     state: status.state || "",
     completed: Boolean(status.completed),
+    winnerSide: homeCompetitor.winner ? "home" : awayCompetitor.winner ? "away" : null,
+    finalHomeScore: Number.isInteger(homeScore) ? homeScore : null,
+    finalAwayScore: Number.isInteger(awayScore) ? awayScore : null,
+    homeShootoutScore: Number.isInteger(homeShootoutScore) ? homeShootoutScore : null,
+    awayShootoutScore: Number.isInteger(awayShootoutScore) ? awayShootoutScore : null,
     homeScore: Number.isInteger(homeScore) ? homeScore : null,
     awayScore: Number.isInteger(awayScore) ? awayScore : null
   };
+}
+
+async function enrichKnockoutMatchFromSummary(match) {
+  if (!match.espnId || !isKnockoutResultReady(match)) {
+    return match;
+  }
+
+  try {
+    const summary = await fetchEspnEventSummary(match.espnId);
+    const summaryCompetition = summary?.header?.competitions?.[0];
+    const summaryCompetitors = summaryCompetition?.competitors;
+
+    if (!Array.isArray(summaryCompetitors)) {
+      return match;
+    }
+
+    const homeCompetitor = summaryCompetitors.find((competitor) => competitor.homeAway === "home");
+    const awayCompetitor = summaryCompetitors.find((competitor) => competitor.homeAway === "away");
+    const regulationHomeScore = getRegulationScoreFromLinescores(homeCompetitor?.linescores);
+    const regulationAwayScore = getRegulationScoreFromLinescores(awayCompetitor?.linescores);
+    const homeShootoutScore = Number(homeCompetitor?.shootoutScore);
+    const awayShootoutScore = Number(awayCompetitor?.shootoutScore);
+
+    return {
+      ...match,
+      winnerSide: homeCompetitor?.winner ? "home" : awayCompetitor?.winner ? "away" : match.winnerSide,
+      homeShootoutScore: Number.isInteger(homeShootoutScore) ? homeShootoutScore : match.homeShootoutScore,
+      awayShootoutScore: Number.isInteger(awayShootoutScore) ? awayShootoutScore : match.awayShootoutScore,
+      homeScore: Number.isInteger(regulationHomeScore) ? regulationHomeScore : match.homeScore,
+      awayScore: Number.isInteger(regulationAwayScore) ? regulationAwayScore : match.awayScore
+    };
+  } catch (error) {
+    return match;
+  }
+}
+
+async function fetchEspnEventSummary(eventId) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(`${ESPN_SUMMARY_BASE_URL}?event=${encodeURIComponent(eventId)}`, {
+      headers: { "Accept": "application/json" },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getRegulationScoreFromLinescores(linescores) {
+  if (!Array.isArray(linescores) || linescores.length < 2) {
+    return null;
+  }
+
+  const firstHalfScore = Number(linescores[0]?.value ?? linescores[0]?.displayValue);
+  const secondHalfScore = Number(linescores[1]?.value ?? linescores[1]?.displayValue);
+
+  if (!Number.isInteger(firstHalfScore) || !Number.isInteger(secondHalfScore)) {
+    return null;
+  }
+
+  return firstHalfScore + secondHalfScore;
 }
 
 function getEspnTeamName(team) {
@@ -281,12 +362,17 @@ function validateKnockoutPredictionPatch(payload, matches) {
 
     const homeScore = Number(prediction?.homeScore);
     const awayScore = Number(prediction?.awayScore);
+    const advanceSide = String(prediction?.advanceSide || "");
 
     if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
       return { error: `Informe um placar válido para ${match.home} x ${match.away}.` };
     }
 
-    validPredictions[matchId] = { homeScore, awayScore };
+    if (!["home", "away"].includes(advanceSide)) {
+      return { error: `Escolha quem passa em caso de prorrogação ou pênaltis em ${match.home} x ${match.away}.` };
+    }
+
+    validPredictions[matchId] = { homeScore, awayScore, advanceSide };
   }
 
   return { predictions: validPredictions };

@@ -689,6 +689,7 @@ button {
 }
 
 .knockout-deadline {
+  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 800;
@@ -1713,6 +1714,43 @@ button {
   font-size: 1.3rem;
 }
 
+.knockout-prediction-match {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.25fr) auto minmax(170px, 0.85fr) auto;
+}
+
+.knockout-advance-picker {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 16px;
+  background: #f8f6ff;
+}
+
+.knockout-advance-picker > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.knockout-advance-picker label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.knockout-advance-picker input {
+  accent-color: var(--primary);
+}
+
+.knockout-advance-picker strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
   .home-panel,
   .season-menu-panel {
@@ -1732,8 +1770,12 @@ button {
   .individual-summary,
   .ranking-card,
   .current-participant-card,
-  .score-detail-card,
-  .upcoming-prediction-card {
+    .score-detail-card,
+    .upcoming-prediction-card {
+    grid-template-columns: 1fr;
+  }
+
+  .knockout-prediction-match {
     grid-template-columns: 1fr;
   }
 
