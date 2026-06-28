@@ -34,6 +34,7 @@ const personalCardDetails = document.querySelector("#personal-card-details");
 const syncResultsButton = document.querySelector("#sync-results-button");
 const backupDataButton = document.querySelector("#backup-data-button");
 const currentGameContent = document.querySelector("#current-game-content");
+const seasonMissingAlert = document.querySelector("#season-missing-alert");
 const scoreSyncStatusElements = document.querySelectorAll(".score-sync-status");
 const knockoutCurrentContent = document.querySelector("#knockout-current-content");
 const knockoutRankingSummary = document.querySelector("#knockout-ranking-summary");
@@ -51,6 +52,7 @@ const SCORE_LABELS = {
   basic: "Acerto básico",
   inverted: "Acerto invertido",
   none: "Nenhum acerto",
+  missing: "Sem palpite para esse jogo",
   pending: "Aguardando placar"
 };
 
@@ -253,6 +255,8 @@ let knockoutRankingEntries = [];
 document.querySelector('[data-screen="group-history"]').addEventListener("click", () => {
   showScreen(homeScreen);
 });
+
+loadSeasonMissingAlert();
 
 document.querySelector('[data-screen="knockout-follow"]').addEventListener("click", async () => {
   showScreen(knockoutFollowScreen);
@@ -659,6 +663,78 @@ async function loadKnockoutState() {
   knockoutPredictions = data.predictions || {};
 }
 
+async function loadSeasonMissingAlert() {
+  if (!seasonMissingAlert) {
+    return;
+  }
+
+  seasonMissingAlert.classList.remove("hidden");
+  seasonMissingAlert.innerHTML = '<p>Conferindo palpites do próximo jogo...</p>';
+
+  try {
+    await loadKnockoutState();
+    renderSeasonMissingAlert();
+  } catch (error) {
+    seasonMissingAlert.innerHTML = '<p>Não consegui conferir os palpites agora.</p>';
+  }
+}
+
+function renderSeasonMissingAlert() {
+  if (!seasonMissingAlert) {
+    return;
+  }
+
+  const nextMatch = getNextKnockoutCalendarMatch();
+
+  if (!nextMatch) {
+    seasonMissingAlert.innerHTML = '<p>Nenhum próximo jogo encontrado no calendário do mata-mata.</p>';
+    return;
+  }
+
+  const missingPlayers = getPlayersMissingPredictionForMatch(nextMatch);
+  const missingText = missingPlayers.length
+    ? `${formatNameList(missingPlayers)} ${missingPlayers.length === 1 ? "não palpitou" : "não palpitaram"} para o próximo jogo.`
+    : "Todo mundo já palpitou para o próximo jogo.";
+
+  seasonMissingAlert.innerHTML = `
+    <div>
+      <span class="season-alert-label">Próximo jogo</span>
+      <strong>${formatTeamNameImage(nextMatch.home)} <span>x</span> ${formatTeamNameImage(nextMatch.away)}</strong>
+      <small>${formatKnockoutDate(nextMatch)} • ${formatKnockoutTime(nextMatch)}</small>
+    </div>
+    <p>${escapeHtml(missingText)}</p>
+  `;
+}
+
+function getNextKnockoutCalendarMatch() {
+  const now = Date.now();
+
+  return knockoutMatches
+    .filter((match) => {
+      const kickoff = Date.parse(match.date || "");
+      return Number.isFinite(kickoff) && kickoff >= now;
+    })
+    .sort(compareKnockoutMatches)[0] || null;
+}
+
+function getPlayersMissingPredictionForMatch(match) {
+  return knockoutPlayers
+    .filter((player) => !hasCompleteKnockoutPrediction(knockoutPredictions[player.playerKey]?.predictions?.[match.id]))
+    .map((player) => player.playerName);
+}
+
+function hasCompleteKnockoutPrediction(prediction) {
+  return hasKnockoutScorePrediction(prediction) && ["home", "away"].includes(prediction?.advanceSide);
+}
+
+function formatNameList(names) {
+  if (names.length <= 3) {
+    return names.join(", ");
+  }
+
+  return `${names.slice(0, 3).join(", ")} e mais ${names.length - 3}`;
+}
+
 async function loadKnockoutFollowData() {
   knockoutCurrentContent.innerHTML = '<p class="empty-state">Atualizando mata-mata...</p>';
   knockoutRankingSummary.innerHTML = "";
@@ -666,6 +742,7 @@ async function loadKnockoutFollowData() {
 
   try {
     await loadKnockoutState();
+    renderSeasonMissingAlert();
     renderKnockoutFollowDashboard();
   } catch (error) {
     knockoutCurrentContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
@@ -677,6 +754,7 @@ async function loadKnockoutPredictionData() {
 
   try {
     await loadKnockoutState();
+    renderSeasonMissingAlert();
     renderKnockoutPredictionScreen();
   } catch (error) {
     knockoutPredictionContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
@@ -1154,6 +1232,7 @@ async function saveKnockoutPrediction(matchId) {
       predictions: data.predictions || {},
       updatedAt: new Date().toISOString()
     };
+    renderSeasonMissingAlert();
     renderKnockoutPredictionScreen();
     showToast("Palpite salvo com sucesso.");
   } catch (error) {
@@ -1194,8 +1273,22 @@ function calculateKnockoutRankingWithMovement(scoredMatches = getScoredKnockoutM
 function scoreKnockoutPlayer(player, scoredMatches) {
   const playerPredictionData = knockoutPredictions[player.playerKey]?.predictions || {};
   const details = scoredMatches.map((match) => {
-    const prediction = playerPredictionData[match.id] || { homeScore: 0, awayScore: 0 };
+    const prediction = playerPredictionData[match.id] || null;
     const result = knockoutResults[match.id];
+
+    if (!hasKnockoutScorePrediction(prediction)) {
+      return {
+        match,
+        prediction: null,
+        result,
+        type: "missing",
+        basePoints: 0,
+        advancePoints: 0,
+        points: 0,
+        missing: true
+      };
+    }
+
     const score = scorePrediction(prediction, result);
     const advancePoints = scoreAdvancePrediction(prediction, match, result);
 
@@ -1220,6 +1313,7 @@ function scoreKnockoutPlayer(player, scoredMatches) {
       intermediate: details.filter((detail) => detail.type === "intermediate").length,
       basic: details.filter((detail) => detail.type === "basic").length,
       inverted: details.filter((detail) => detail.type === "inverted").length,
+      missing: details.filter((detail) => detail.type === "missing").length,
       none: details.filter((detail) => detail.type === "none").length
     },
     details
@@ -1241,6 +1335,13 @@ function isKnockoutDecidedOnPenalties(match, result) {
     Number.isInteger(match.homeShootoutScore) &&
     Number.isInteger(match.awayShootoutScore)
   );
+}
+
+function hasKnockoutScorePrediction(prediction) {
+  const hasHomeScore = prediction?.homeScore !== "" && prediction?.homeScore !== null && prediction?.homeScore !== undefined;
+  const hasAwayScore = prediction?.awayScore !== "" && prediction?.awayScore !== null && prediction?.awayScore !== undefined;
+
+  return hasHomeScore && hasAwayScore && Number.isInteger(Number(prediction.homeScore)) && Number.isInteger(Number(prediction.awayScore));
 }
 
 function getScoredKnockoutMatches() {
@@ -1343,6 +1444,18 @@ function getKnockoutCurrentDetail(entry, match) {
   }
 
   const prediction = knockoutPredictions[entry.id]?.predictions?.[match.id] || null;
+
+  if (!hasKnockoutScorePrediction(prediction)) {
+    return {
+      match,
+      prediction: null,
+      result: null,
+      type: "missing",
+      points: 0,
+      pending: false,
+      missing: true
+    };
+  }
 
   return {
     match,
@@ -1519,8 +1632,16 @@ function getCurrentBlockScoreType(details) {
     return "none";
   }
 
+  if (details.every((detail) => ["pending", "missing"].includes(detail.type))) {
+    return details.some((detail) => detail.type === "missing") ? "missing" : "pending";
+  }
+
   if (details.every((detail) => detail.type === "pending")) {
     return "pending";
+  }
+
+  if (details.every((detail) => detail.type === "missing")) {
+    return "missing";
   }
 
   if (details.some((detail) => detail.type === "inverted")) {

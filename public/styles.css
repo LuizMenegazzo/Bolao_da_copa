@@ -133,6 +133,56 @@ button {
   margin-bottom: 0;
 }
 
+.season-missing-alert {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 197, 89, 0.45);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(249, 255, 114, 0.28), transparent 10rem),
+    linear-gradient(135deg, #fff8da, #ffffff);
+}
+
+.season-missing-alert > div,
+.season-missing-alert p {
+  margin: 0;
+}
+
+.season-missing-alert strong,
+.season-missing-alert small,
+.season-missing-alert p {
+  display: block;
+}
+
+.season-missing-alert strong {
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.season-missing-alert small,
+.season-missing-alert p {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.season-alert-label {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 6px;
+  padding: 6px 9px;
+  color: #784d00;
+  border-radius: 999px;
+  background: #ffedb2;
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .main-action {
   min-height: 164px;
   padding: 24px;
@@ -449,6 +499,11 @@ button {
 .current-participant-card.inverted {
   border-left-color: #ff5c68;
   background: #fff8f8;
+}
+
+.current-participant-card.missing {
+  border-left-color: #8d86ad;
+  background: #faf9ff;
 }
 
 .current-participant-card.pending {
@@ -1763,6 +1818,10 @@ button {
   .season-menu-panel,
   .knockout-dashboard,
   .groups-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .season-missing-alert {
     grid-template-columns: 1fr;
   }
 
