@@ -863,18 +863,12 @@ function renderKnockoutMatchScoreboard(match) {
 function getKnockoutResultLabel(match) {
   const result = knockoutResults[match.id];
 
-  if (!result || !isKnockoutDecidedAfterRegulation(match, result)) {
+  if (!result || !isKnockoutDecidedOnPenalties(match, result)) {
     return "Mata-mata";
   }
 
   const winnerName = escapeHtml(match.winnerSide === "home" ? match.home : match.away);
-  const hasShootout = Number.isInteger(match.homeShootoutScore) && Number.isInteger(match.awayShootoutScore);
-
-  if (hasShootout) {
-    return `Passou ${winnerName} nos pênaltis (${match.homeShootoutScore}x${match.awayShootoutScore})`;
-  }
-
-  return `Passou ${winnerName} na prorrogação`;
+  return `Passou ${winnerName} nos pênaltis (${match.homeShootoutScore}x${match.awayShootoutScore})`;
 }
 
 function renderKnockoutRanking() {
@@ -1029,7 +1023,7 @@ function renderKnockoutPredictionMatch(match, prediction) {
         <input class="score-input knockout-score-input" type="number" inputmode="numeric" min="0" max="99" data-knockout-match-id="${match.id}" data-side="awayScore" value="${hasPrediction ? prediction.awayScore : ""}" ${lockInfo.locked ? "disabled" : ""} />
       </div>
       <div class="knockout-advance-picker">
-        <span>Se empatar, quem passa?</span>
+        <span>Se der pênalti, quem passa?</span>
         <label>
           <input type="radio" name="advance-${escapeHtml(match.id)}" value="home" data-side="advanceSide" ${selectedAdvanceSide === "home" ? "checked" : ""} ${lockInfo.locked ? "disabled" : ""} />
           ${formatTeamFlagTiny(match.home)}
@@ -1134,7 +1128,7 @@ async function saveKnockoutPrediction(matchId) {
   }
 
   if (!["home", "away"].includes(advanceSide)) {
-    showToast("Escolha quem passa se o jogo for para prorrogação ou pênaltis.");
+    showToast("Escolha quem passa se o jogo for para os pênaltis.");
     return;
   }
 
@@ -1233,17 +1227,19 @@ function scoreKnockoutPlayer(player, scoredMatches) {
 }
 
 function scoreAdvancePrediction(prediction, match, result) {
-  if (!isKnockoutDecidedAfterRegulation(match, result)) {
+  if (!isKnockoutDecidedOnPenalties(match, result)) {
     return 0;
   }
 
-  return prediction?.advanceSide === match.winnerSide ? 2 : 0;
+  return prediction?.advanceSide === match.winnerSide ? 3 : 0;
 }
 
-function isKnockoutDecidedAfterRegulation(match, result) {
+function isKnockoutDecidedOnPenalties(match, result) {
   return (
     getOutcome(Number(result.homeScore), Number(result.awayScore)) === "draw" &&
-    ["home", "away"].includes(match.winnerSide)
+    ["home", "away"].includes(match.winnerSide) &&
+    Number.isInteger(match.homeShootoutScore) &&
+    Number.isInteger(match.awayShootoutScore)
   );
 }
 
@@ -1580,7 +1576,7 @@ function formatAdvancePrediction(prediction, match) {
   }
 
   const teamName = prediction.advanceSide === "home" ? match.home : match.away;
-  return ` • passa ${escapeHtml(teamName)}`;
+  return ` • pênaltis: ${escapeHtml(teamName)}`;
 }
 
 async function fetchCartelas() {

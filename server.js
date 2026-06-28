@@ -226,8 +226,6 @@ async function enrichKnockoutMatchFromSummary(match) {
 
     const homeCompetitor = summaryCompetitors.find((competitor) => competitor.homeAway === "home");
     const awayCompetitor = summaryCompetitors.find((competitor) => competitor.homeAway === "away");
-    const regulationHomeScore = getRegulationScoreFromLinescores(homeCompetitor?.linescores);
-    const regulationAwayScore = getRegulationScoreFromLinescores(awayCompetitor?.linescores);
     const homeShootoutScore = Number(homeCompetitor?.shootoutScore);
     const awayShootoutScore = Number(awayCompetitor?.shootoutScore);
 
@@ -235,9 +233,7 @@ async function enrichKnockoutMatchFromSummary(match) {
       ...match,
       winnerSide: homeCompetitor?.winner ? "home" : awayCompetitor?.winner ? "away" : match.winnerSide,
       homeShootoutScore: Number.isInteger(homeShootoutScore) ? homeShootoutScore : match.homeShootoutScore,
-      awayShootoutScore: Number.isInteger(awayShootoutScore) ? awayShootoutScore : match.awayShootoutScore,
-      homeScore: Number.isInteger(regulationHomeScore) ? regulationHomeScore : match.homeScore,
-      awayScore: Number.isInteger(regulationAwayScore) ? regulationAwayScore : match.awayScore
+      awayShootoutScore: Number.isInteger(awayShootoutScore) ? awayShootoutScore : match.awayShootoutScore
     };
   } catch (error) {
     return match;
@@ -262,21 +258,6 @@ async function fetchEspnEventSummary(eventId) {
   } finally {
     clearTimeout(timeout);
   }
-}
-
-function getRegulationScoreFromLinescores(linescores) {
-  if (!Array.isArray(linescores) || linescores.length < 2) {
-    return null;
-  }
-
-  const firstHalfScore = Number(linescores[0]?.value ?? linescores[0]?.displayValue);
-  const secondHalfScore = Number(linescores[1]?.value ?? linescores[1]?.displayValue);
-
-  if (!Number.isInteger(firstHalfScore) || !Number.isInteger(secondHalfScore)) {
-    return null;
-  }
-
-  return firstHalfScore + secondHalfScore;
 }
 
 function getEspnTeamName(team) {
@@ -369,7 +350,7 @@ function validateKnockoutPredictionPatch(payload, matches) {
     }
 
     if (!["home", "away"].includes(advanceSide)) {
-      return { error: `Escolha quem passa em caso de prorrogação ou pênaltis em ${match.home} x ${match.away}.` };
+      return { error: `Escolha quem passa se der pênalti em ${match.home} x ${match.away}.` };
     }
 
     validPredictions[matchId] = { homeScore, awayScore, advanceSide };
