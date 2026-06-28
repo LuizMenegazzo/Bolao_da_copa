@@ -70,24 +70,26 @@
           <div>
             <p class="eyebrow">Mata-mata</p>
             <h2>Acompanhar bolão mata-mata</h2>
-            <p>Nova área para acompanhar o jogo atual e a classificação do bolão eliminatório.</p>
+            <p>Jogo atual e classificação geral do novo bolão, começando do zero no mata-mata.</p>
           </div>
           <button class="ghost-button" type="button" id="back-season-menu-knockout">Voltar</button>
         </div>
 
-        <div class="knockout-dashboard">
-          <section class="knockout-card knockout-current-card">
-            <p class="eyebrow">Jogo atual</p>
-            <h3>Mata-mata em preparação</h3>
-            <p>Quando configurarmos os palpites do mata-mata, aqui vai aparecer o jogo atual com placar, palpites e impacto na pontuação.</p>
-          </section>
-
-          <section class="knockout-card">
-            <p class="eyebrow">Classificação</p>
-            <h3>Ranking do mata-mata</h3>
-            <p>A classificação do novo bolão vai aparecer aqui, separada do histórico da fase de grupos.</p>
-          </section>
+        <div class="tabs" role="tablist" aria-label="Acompanhar bolão mata-mata">
+          <button class="tab-button active" type="button" data-knockout-tab="current">Jogo atual</button>
+          <button class="tab-button" type="button" data-knockout-tab="ranking">Classificação geral</button>
         </div>
+
+        <section id="knockout-current-tab" class="follow-tab">
+          <div id="knockout-current-content" class="current-game-content" aria-live="polite">
+            <p class="empty-state">Carregando mata-mata...</p>
+          </div>
+        </section>
+
+        <section id="knockout-ranking-tab" class="follow-tab hidden">
+          <div id="knockout-ranking-summary" class="ranking-summary"></div>
+          <div id="knockout-ranking-list" class="ranking-list"></div>
+        </section>
       </section>
 
       <section id="knockout-predictions-screen" class="panel form-panel hidden">
@@ -100,7 +102,9 @@
           <button class="ghost-button" type="button" id="back-season-menu-predictions">Voltar</button>
         </div>
 
-        <p class="empty-state">Próxima etapa: configurar os jogos e as regras de palpite do mata-mata.</p>
+        <div id="knockout-prediction-content" class="knockout-prediction-content" aria-live="polite">
+          <p class="empty-state">Carregando participantes e jogos do mata-mata...</p>
+        </div>
       </section>
 
       <section id="current-game-screen" class="panel form-panel hidden">

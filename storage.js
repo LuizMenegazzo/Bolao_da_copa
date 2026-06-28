@@ -3,6 +3,10 @@ const path = require("path");
 
 const CARTELAS_FILE = path.join(__dirname, "data", "cartelas.json");
 const RESULTS_FILE = path.join(__dirname, "data", "results.json");
+const KNOCKOUT_PLAYERS_FILE = path.join(__dirname, "data", "knockout-players.json");
+const KNOCKOUT_PREDICTIONS_FILE = path.join(__dirname, "data", "knockout-predictions.json");
+const KNOCKOUT_MATCHES_FILE = path.join(__dirname, "data", "knockout-matches.json");
+const KNOCKOUT_RESULTS_FILE = path.join(__dirname, "data", "knockout-results.json");
 const DATABASE_URL = process.env.DATABASE_URL;
 
 let pool;
@@ -54,6 +58,42 @@ async function initStorage() {
 
   await database.query(`
     CREATE TABLE IF NOT EXISTS results (
+      match_id TEXT PRIMARY KEY,
+      home_score INTEGER NOT NULL,
+      away_score INTEGER NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS knockout_players (
+      player_key TEXT PRIMARY KEY,
+      player_name TEXT NOT NULL,
+      password_hash TEXT,
+      password_salt TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ
+    )
+  `);
+
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS knockout_predictions (
+      player_key TEXT PRIMARY KEY REFERENCES knockout_players(player_key) ON DELETE CASCADE,
+      predictions JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS knockout_matches (
+      id TEXT PRIMARY KEY,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS knockout_results (
       match_id TEXT PRIMARY KEY,
       home_score INTEGER NOT NULL,
       away_score INTEGER NOT NULL,
@@ -233,11 +273,243 @@ async function updateResults(resultsPatch) {
   return getResults();
 }
 
+async function getKnockoutPlayers() {
+  const database = getPool();
+
+  if (!database) {
+    return readJsonFile(KNOCKOUT_PLAYERS_FILE, {});
+  }
+
+  const { rows } = await database.query(`
+    SELECT player_key, player_name, password_hash, password_salt, created_at, updated_at
+    FROM knockout_players
+    ORDER BY player_name ASC
+  `);
+
+  return rows.reduce((players, row) => {
+    players[row.player_key] = mapKnockoutPlayerRow(row);
+    return players;
+  }, {});
+}
+
+async function upsertKnockoutPlayer(player) {
+  const database = getPool();
+
+  if (!database) {
+    const players = readJsonFile(KNOCKOUT_PLAYERS_FILE, {});
+    players[player.playerKey] = {
+      ...players[player.playerKey],
+      ...player,
+      updatedAt: new Date().toISOString()
+    };
+    writeJsonFile(KNOCKOUT_PLAYERS_FILE, players);
+    return players[player.playerKey];
+  }
+
+  const { rows } = await database.query(
+    `
+      INSERT INTO knockout_players (player_key, player_name, password_hash, password_salt, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      ON CONFLICT (player_key)
+      DO UPDATE SET player_name = EXCLUDED.player_name,
+                    password_hash = COALESCE(EXCLUDED.password_hash, knockout_players.password_hash),
+                    password_salt = COALESCE(EXCLUDED.password_salt, knockout_players.password_salt),
+                    updated_at = NOW()
+      RETURNING player_key, player_name, password_hash, password_salt, created_at, updated_at
+    `,
+    [player.playerKey, player.playerName, player.passwordHash || null, player.passwordSalt || null]
+  );
+
+  return mapKnockoutPlayerRow(rows[0]);
+}
+
+async function getKnockoutPredictions() {
+  const database = getPool();
+
+  if (!database) {
+    return readJsonFile(KNOCKOUT_PREDICTIONS_FILE, {});
+  }
+
+  const { rows } = await database.query("SELECT player_key, predictions, updated_at FROM knockout_predictions");
+
+  return rows.reduce((predictions, row) => {
+    predictions[row.player_key] = {
+      predictions: row.predictions,
+      updatedAt: row.updated_at.toISOString()
+    };
+    return predictions;
+  }, {});
+}
+
+async function updateKnockoutPredictions(playerKey, predictions) {
+  const database = getPool();
+
+  if (!database) {
+    const allPredictions = readJsonFile(KNOCKOUT_PREDICTIONS_FILE, {});
+    allPredictions[playerKey] = {
+      predictions,
+      updatedAt: new Date().toISOString()
+    };
+    writeJsonFile(KNOCKOUT_PREDICTIONS_FILE, allPredictions);
+    return allPredictions[playerKey];
+  }
+
+  const { rows } = await database.query(
+    `
+      INSERT INTO knockout_predictions (player_key, predictions, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (player_key)
+      DO UPDATE SET predictions = EXCLUDED.predictions,
+                    updated_at = NOW()
+      RETURNING player_key, predictions, updated_at
+    `,
+    [playerKey, JSON.stringify(predictions)]
+  );
+
+  return {
+    predictions: rows[0].predictions,
+    updatedAt: rows[0].updated_at.toISOString()
+  };
+}
+
+async function getKnockoutMatches() {
+  const database = getPool();
+
+  if (!database) {
+    return readJsonFile(KNOCKOUT_MATCHES_FILE, []);
+  }
+
+  const { rows } = await database.query("SELECT payload FROM knockout_matches ORDER BY payload->>'date' ASC");
+  return rows.map((row) => row.payload);
+}
+
+async function upsertKnockoutMatches(matches) {
+  const database = getPool();
+
+  if (!database) {
+    const currentMatches = readJsonFile(KNOCKOUT_MATCHES_FILE, []);
+    const matchesById = new Map(currentMatches.map((match) => [match.id, match]));
+
+    for (const match of matches) {
+      matchesById.set(match.id, match);
+    }
+
+    const nextMatches = [...matchesById.values()].sort((first, second) => String(first.date).localeCompare(String(second.date)));
+    writeJsonFile(KNOCKOUT_MATCHES_FILE, nextMatches);
+    return nextMatches;
+  }
+
+  const client = await database.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    for (const match of matches) {
+      await client.query(
+        `
+          INSERT INTO knockout_matches (id, payload, updated_at)
+          VALUES ($1, $2, NOW())
+          ON CONFLICT (id)
+          DO UPDATE SET payload = EXCLUDED.payload,
+                        updated_at = NOW()
+        `,
+        [match.id, JSON.stringify(match)]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return getKnockoutMatches();
+}
+
+async function getKnockoutResults() {
+  const database = getPool();
+
+  if (!database) {
+    return readJsonFile(KNOCKOUT_RESULTS_FILE, {});
+  }
+
+  const { rows } = await database.query("SELECT match_id, home_score, away_score, updated_at FROM knockout_results");
+
+  return rows.reduce((results, row) => {
+    results[row.match_id] = {
+      homeScore: row.home_score,
+      awayScore: row.away_score,
+      updatedAt: row.updated_at.toISOString()
+    };
+    return results;
+  }, {});
+}
+
+async function updateKnockoutResults(resultsPatch) {
+  const database = getPool();
+
+  if (!database) {
+    const currentResults = readJsonFile(KNOCKOUT_RESULTS_FILE, {});
+
+    for (const [matchId, result] of Object.entries(resultsPatch)) {
+      currentResults[matchId] = {
+        ...result,
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    writeJsonFile(KNOCKOUT_RESULTS_FILE, currentResults);
+    return currentResults;
+  }
+
+  const client = await database.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    for (const [matchId, result] of Object.entries(resultsPatch)) {
+      await client.query(
+        `
+          INSERT INTO knockout_results (match_id, home_score, away_score, updated_at)
+          VALUES ($1, $2, $3, NOW())
+          ON CONFLICT (match_id)
+          DO UPDATE SET home_score = EXCLUDED.home_score,
+                        away_score = EXCLUDED.away_score,
+                        updated_at = NOW()
+        `,
+        [matchId, result.homeScore, result.awayScore]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return getKnockoutResults();
+}
+
 function mapCartelaRow(row) {
   return {
     id: row.id,
     playerName: row.player_name,
     predictions: row.predictions,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at ? row.updated_at.toISOString() : undefined
+  };
+}
+
+function mapKnockoutPlayerRow(row) {
+  return {
+    playerKey: row.player_key,
+    playerName: row.player_name,
+    passwordHash: row.password_hash || undefined,
+    passwordSalt: row.password_salt || undefined,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at ? row.updated_at.toISOString() : undefined
   };
@@ -300,5 +572,13 @@ module.exports = {
   updateCartela,
   deleteCartela,
   getResults,
-  updateResults
+  updateResults,
+  getKnockoutPlayers,
+  upsertKnockoutPlayer,
+  getKnockoutPredictions,
+  updateKnockoutPredictions,
+  getKnockoutMatches,
+  upsertKnockoutMatches,
+  getKnockoutResults,
+  updateKnockoutResults
 };

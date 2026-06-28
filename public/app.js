@@ -34,6 +34,12 @@ const syncResultsButton = document.querySelector("#sync-results-button");
 const backupDataButton = document.querySelector("#backup-data-button");
 const currentGameContent = document.querySelector("#current-game-content");
 const scoreSyncStatusElements = document.querySelectorAll(".score-sync-status");
+const knockoutCurrentContent = document.querySelector("#knockout-current-content");
+const knockoutRankingSummary = document.querySelector("#knockout-ranking-summary");
+const knockoutRankingList = document.querySelector("#knockout-ranking-list");
+const knockoutCurrentTab = document.querySelector("#knockout-current-tab");
+const knockoutRankingTab = document.querySelector("#knockout-ranking-tab");
+const knockoutPredictionContent = document.querySelector("#knockout-prediction-content");
 
 const ADMIN_PASSWORD_KEY = "bolaoAdminPassword";
 
@@ -98,53 +104,94 @@ const TEAM_FLAGS = {
 
 const TEAM_FLAG_CODES = {
   "AFRICA DO SUL": "za",
+  "SOUTH AFRICA": "za",
   "ALEMANHA": "de",
+  "GERMANY": "de",
   "ARGENTINA": "ar",
   "ARGELIA": "dz",
+  "ALGERIA": "dz",
   "ARABIA SAUDITA": "sa",
+  "SAUDI ARABIA": "sa",
   "AUSTRALIA": "au",
   "AUSTRIA": "at",
   "BELGICA": "be",
+  "BELGIUM": "be",
   "BOSNIA": "ba",
+  "BOSNIA AND HERZEGOVINA": "ba",
   "BRASIL": "br",
+  "BRAZIL": "br",
   "CABO VERDE": "cv",
+  "CAPE VERDE": "cv",
   "CANADA": "ca",
   "CATAR": "qa",
+  "QATAR": "qa",
   "COLOMBIA": "co",
   "COREIA DO SUL": "kr",
+  "SOUTH KOREA": "kr",
+  "KOREA REPUBLIC": "kr",
   "COSTA DO MARFIM": "ci",
+  "IVORY COAST": "ci",
+  "COTE D IVOIRE": "ci",
   "CROACIA": "hr",
+  "CROATIA": "hr",
   "CURACAO": "cw",
   "EGITO": "eg",
+  "EGYPT": "eg",
   "EQUADOR": "ec",
+  "ECUADOR": "ec",
   "ESCOCIA": "gb-sct",
+  "SCOTLAND": "gb-sct",
   "ESPANHA": "es",
+  "SPAIN": "es",
   "ESTADOS UNIDOS": "us",
+  "UNITED STATES": "us",
+  "USA": "us",
   "FRANCA": "fr",
+  "FRANCE": "fr",
   "GANA": "gh",
+  "GHANA": "gh",
   "HAITI": "ht",
   "HOLANDA": "nl",
+  "NETHERLANDS": "nl",
   "INGLATERRA": "gb-eng",
+  "ENGLAND": "gb-eng",
   "IRA": "ir",
+  "IRAN": "ir",
   "IRAQUE": "iq",
+  "IRAQ": "iq",
   "JAPAO": "jp",
+  "JAPAN": "jp",
   "JORDANIA": "jo",
+  "JORDAN": "jo",
   "MARROCOS": "ma",
+  "MOROCCO": "ma",
   "MEXICO": "mx",
   "NORUEGA": "no",
+  "NORWAY": "no",
   "NOVA ZELANDIA": "nz",
+  "NEW ZEALAND": "nz",
   "PANAMA": "pa",
   "PARAGUAI": "py",
+  "PARAGUAY": "py",
   "PORTUGAL": "pt",
   "RD CONGO": "cd",
+  "DR CONGO": "cd",
+  "CONGO DR": "cd",
   "REPUBLICA TCHECA": "cz",
+  "CZECH REPUBLIC": "cz",
+  "CZECHIA": "cz",
   "SENEGAL": "sn",
   "SUECIA": "se",
+  "SWEDEN": "se",
   "SUICA": "ch",
+  "SWITZERLAND": "ch",
   "TUNISIA": "tn",
   "TURQUIA": "tr",
+  "TURKEY": "tr",
   "URUGUAI": "uy",
-  "UZBEQUISTAO": "uz"
+  "URUGUAY": "uy",
+  "UZBEQUISTAO": "uz",
+  "UZBEKISTAN": "uz"
 };
 
 const PLAYER_CHIBIS = {
@@ -191,17 +238,27 @@ let editingCartelaId = null;
 let rankingEntries = [];
 let personalEntries = [];
 let scoreSyncStatus = null;
+let knockoutPlayers = [];
+let knockoutMatches = [];
+let knockoutResults = {};
+let knockoutPredictions = {};
+let selectedKnockoutPlayer = null;
+let activeKnockoutPlayer = null;
+let activeKnockoutPassword = "";
+let knockoutRankingEntries = [];
 
 document.querySelector('[data-screen="group-history"]').addEventListener("click", () => {
   showScreen(homeScreen);
 });
 
-document.querySelector('[data-screen="knockout-follow"]').addEventListener("click", () => {
+document.querySelector('[data-screen="knockout-follow"]').addEventListener("click", async () => {
   showScreen(knockoutFollowScreen);
+  await loadKnockoutFollowData();
 });
 
-document.querySelector('[data-screen="knockout-predictions"]').addEventListener("click", () => {
+document.querySelector('[data-screen="knockout-predictions"]').addEventListener("click", async () => {
   showScreen(knockoutPredictionsScreen);
+  await loadKnockoutPredictionData();
 });
 
 document.querySelector('[data-screen="current-game"]').addEventListener("click", async () => {
@@ -290,9 +347,35 @@ personalCardsGrid.addEventListener("click", (event) => {
   renderPersonalCardDetails(button.dataset.personalCartelaId);
 });
 
+knockoutPredictionContent.addEventListener("click", async (event) => {
+  const playerButton = event.target.closest("button[data-knockout-player-key]");
+  const authButton = event.target.closest("button[data-knockout-auth]");
+  const saveButton = event.target.closest("button[data-knockout-save-match]");
+
+  if (playerButton) {
+    selectKnockoutPlayer(playerButton.dataset.knockoutPlayerKey);
+    return;
+  }
+
+  if (authButton) {
+    await authenticateKnockoutPlayer();
+    return;
+  }
+
+  if (saveButton) {
+    await saveKnockoutPrediction(saveButton.dataset.knockoutSaveMatch);
+  }
+});
+
 document.querySelectorAll("[data-follow-tab]").forEach((button) => {
   button.addEventListener("click", () => {
     setFollowTab(button.dataset.followTab);
+  });
+});
+
+document.querySelectorAll("[data-knockout-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    setKnockoutTab(button.dataset.knockoutTab);
   });
 });
 
@@ -534,6 +617,543 @@ async function loadCurrentGameData() {
   } catch (error) {
     currentGameContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
   }
+}
+
+async function loadKnockoutState() {
+  const response = await fetch("/api/knockout/state");
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Não foi possível carregar o mata-mata.");
+  }
+
+  knockoutPlayers = data.players || [];
+  knockoutMatches = (data.matches || []).sort(compareKnockoutMatches);
+  knockoutResults = data.results || {};
+  knockoutPredictions = data.predictions || {};
+}
+
+async function loadKnockoutFollowData() {
+  knockoutCurrentContent.innerHTML = '<p class="empty-state">Atualizando mata-mata...</p>';
+  knockoutRankingSummary.innerHTML = "";
+  knockoutRankingList.innerHTML = "";
+
+  try {
+    await loadKnockoutState();
+    renderKnockoutFollowDashboard();
+  } catch (error) {
+    knockoutCurrentContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function loadKnockoutPredictionData() {
+  knockoutPredictionContent.innerHTML = '<p class="empty-state">Carregando participantes e jogos do mata-mata...</p>';
+
+  try {
+    await loadKnockoutState();
+    renderKnockoutPredictionScreen();
+  } catch (error) {
+    knockoutPredictionContent.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderKnockoutFollowDashboard() {
+  knockoutRankingEntries = calculateKnockoutRankingWithMovement();
+  renderKnockoutCurrentGame();
+  renderKnockoutRanking();
+}
+
+function renderKnockoutCurrentGame() {
+  const currentBlock = getLatestKnockoutUpdatedBlock();
+  const currentMatches = currentBlock.matches;
+
+  if (!currentMatches.length) {
+    knockoutCurrentContent.innerHTML = '<p class="empty-state">Ainda não há placar oficial no mata-mata.</p>';
+    return;
+  }
+
+  const participants = knockoutRankingEntries.map((entry) => {
+    const currentDetails = currentMatches
+      .map((match) => entry.details.find((detail) => detail.match.id === match.id))
+      .filter(Boolean);
+
+    return {
+      ...entry,
+      currentDetails,
+      currentDetail: currentDetails[0]
+    };
+  });
+  const chibiContext = createChibiContext(participants, currentMatches);
+  const updatedAt = currentBlock.updatedAt ? formatDate(currentBlock.updatedAt) : "Horário não informado";
+  const blockLabel = currentMatches.length > 1
+    ? `${formatKnockoutDate(currentMatches[0])} • ${formatKnockoutTime(currentMatches[0])} • ${currentMatches.length} jogos simultâneos`
+    : `${formatKnockoutDate(currentMatches[0])} • ${formatKnockoutTime(currentMatches[0])} • Mata-mata`;
+
+  knockoutCurrentContent.innerHTML = `
+    <section class="current-match-hero">
+      <div class="current-match-meta">
+        <span class="live-pill">⚽ Último bloco atualizado</span>
+        <span>${blockLabel}</span>
+      </div>
+      <div class="current-match-scoreboards">
+        ${currentMatches.map((match) => renderKnockoutMatchScoreboard(match)).join("")}
+      </div>
+      <small>Atualizado em ${escapeHtml(updatedAt)}</small>
+    </section>
+
+    <section class="current-participants-section">
+      <div class="current-participants-title">
+        <div>
+          <p class="eyebrow">Impacto no mata-mata</p>
+          <h3>Palpites e pontuação</h3>
+        </div>
+        <span>${participants.length} cartelas</span>
+      </div>
+      <div class="current-participants-list">
+        ${participants.map((entry) => renderCurrentParticipant(entry, chibiContext)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderKnockoutMatchScoreboard(match) {
+  const result = knockoutResults[match.id];
+
+  return `
+    <article class="current-match-scoreboard">
+      <div class="current-match-team current-match-flag-team home">${formatTeamFlagOnly(match.home)}</div>
+      <div class="current-match-score">
+        <strong>${result.homeScore}</strong>
+        <span>x</span>
+        <strong>${result.awayScore}</strong>
+      </div>
+      <div class="current-match-team current-match-flag-team away">${formatTeamFlagOnly(match.away)}</div>
+      <small>${formatKnockoutDate(match)} • ${formatKnockoutTime(match)} • Mata-mata</small>
+    </article>
+  `;
+}
+
+function renderKnockoutRanking() {
+  knockoutRankingSummary.innerHTML = `
+    <article class="summary-card">
+      <span>🏆 Jogos com resultado</span>
+      <strong>${getScoredKnockoutMatches().length}</strong>
+    </article>
+    <article class="summary-card">
+      <span>🎟️ Cartelas no mata-mata</span>
+      <strong>${knockoutPlayers.length}</strong>
+    </article>
+  `;
+
+  if (!knockoutRankingEntries.length) {
+    knockoutRankingList.innerHTML = '<p class="empty-state">Ainda não há participantes no mata-mata.</p>';
+    return;
+  }
+
+  const chibiContext = createChibiContext(knockoutRankingEntries, getLatestKnockoutUpdatedBlock().matches);
+
+  knockoutRankingList.innerHTML = knockoutRankingEntries.map((entry, index) => {
+    const rankBadge = getRankBadge(entry, index, knockoutRankingEntries.length);
+    const accuracy = entry.played ? Math.round((entry.counts.complete / entry.played) * 100) : 0;
+
+    return `
+      <article class="ranking-card ${index < 3 ? "podium" : ""}">
+        <div class="ranking-rank-area">
+          <div class="rank-position-stack">
+            <div class="rank-position">${rankBadge}</div>
+            ${renderRankMovement(entry.movement)}
+          </div>
+          ${renderChibiAvatar(entry.playerName, "ranking-chibi", entry, chibiContext)}
+        </div>
+        <div class="ranking-player">
+          <strong>${escapeHtml(entry.playerName)}</strong>
+          <span>${entry.played} jogos pontuados • ${accuracy}% de placares exatos</span>
+        </div>
+        <div class="ranking-stats">
+          <span title="Acertos completos">🎯 ${entry.counts.complete}</span>
+          <span title="Acertos intermediários">✨ ${entry.counts.intermediate}</span>
+          <span title="Acertos básicos">✅ ${entry.counts.basic}</span>
+          <span title="Acertos invertidos">🔄 ${entry.counts.inverted}</span>
+        </div>
+        <div class="ranking-points">${entry.total}<small>pts</small></div>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderKnockoutPredictionScreen() {
+  knockoutPredictionContent.innerHTML = `
+    <section class="knockout-player-picker">
+      <div class="current-participants-title">
+        <div>
+          <p class="eyebrow">Participante</p>
+          <h3>Escolha seu chibi</h3>
+        </div>
+      </div>
+      <div class="personal-cards-grid">
+        ${knockoutPlayers.map((player) => `
+          <button class="personal-card-button ${selectedKnockoutPlayer?.playerKey === player.playerKey ? "active" : ""}" type="button" data-knockout-player-key="${player.playerKey}">
+            ${renderChibiAvatar(player.playerName, "personal-card-chibi")}
+            <strong>${escapeHtml(player.playerName)}</strong>
+            <small>${player.hasPassword ? "Senha criada" : "Primeiro acesso"}</small>
+          </button>
+        `).join("")}
+      </div>
+    </section>
+
+    <section id="knockout-prediction-editor" class="knockout-prediction-editor">
+      ${renderKnockoutSelectedPanel()}
+    </section>
+  `;
+}
+
+function renderKnockoutSelectedPanel() {
+  if (activeKnockoutPlayer) {
+    return renderKnockoutPredictionEditor();
+  }
+
+  if (selectedKnockoutPlayer) {
+    return renderKnockoutPasswordPanel(selectedKnockoutPlayer);
+  }
+
+  return '<p class="empty-state">Escolha seu chibi para criar/abrir sua cartela do mata-mata.</p>';
+}
+
+function renderKnockoutPasswordPanel(player) {
+  return `
+    <section class="knockout-password-card">
+      <div class="personal-hero-player">
+        ${renderChibiAvatar(player.playerName, "personal-hero-chibi")}
+        <div>
+          <p class="eyebrow">${player.hasPassword ? "Abrir cartela" : "Primeiro acesso"}</p>
+          <h3>${escapeHtml(player.playerName)}</h3>
+          <p>${player.hasPassword ? "Digite sua senha para alterar os palpites." : "Crie uma senha para proteger seus palpites."}</p>
+        </div>
+      </div>
+      <label class="player-field knockout-password-field">
+        <span>Senha da cartela</span>
+        <input id="knockout-password-input" type="password" autocomplete="current-password" minlength="3" />
+      </label>
+      <button class="save-button" type="button" data-knockout-auth>
+        ${player.hasPassword ? "Abrir cartela" : "Criar senha e abrir"}
+      </button>
+    </section>
+  `;
+}
+
+function renderKnockoutPredictionEditor() {
+  if (!knockoutMatches.length) {
+    return '<p class="empty-state">Ainda não encontrei jogos definidos do mata-mata na ESPN.</p>';
+  }
+
+  const savedPredictions = knockoutPredictions[activeKnockoutPlayer.playerKey]?.predictions || {};
+
+  return `
+    <div class="section-header compact-section-header">
+      <div>
+        <p class="eyebrow">Cartela aberta</p>
+        <h3>${escapeHtml(activeKnockoutPlayer.playerName)}</h3>
+        <p>Palpites liberados até 10 minutos antes de cada jogo.</p>
+      </div>
+    </div>
+
+    <div class="knockout-match-list">
+      ${knockoutMatches.map((match) => renderKnockoutPredictionMatch(match, savedPredictions[match.id])).join("")}
+    </div>
+  `;
+}
+
+function renderKnockoutPredictionMatch(match, prediction) {
+  const lockInfo = match.lock || getKnockoutLockInfo(match);
+  const hasPrediction = Number.isInteger(prediction?.homeScore) && Number.isInteger(prediction?.awayScore);
+
+  return `
+    <article class="upcoming-prediction-card knockout-prediction-match ${lockInfo.locked ? "locked" : ""}" data-knockout-match-row="${match.id}">
+      <div class="upcoming-match-meta">
+        <strong>${formatKnockoutDate(match)}</strong>
+        <span>${formatKnockoutTime(match)} • Mata-mata</span>
+      </div>
+      <div class="upcoming-match-teams">
+        <span>${formatTeamNameImage(match.home)}</span>
+        <strong>x</strong>
+        <span>${formatTeamNameImage(match.away)}</span>
+      </div>
+      <div class="score-box knockout-score-box">
+        <input class="score-input knockout-score-input" type="number" inputmode="numeric" min="0" max="99" data-knockout-match-id="${match.id}" data-side="homeScore" value="${hasPrediction ? prediction.homeScore : ""}" ${lockInfo.locked ? "disabled" : ""} />
+        <span>x</span>
+        <input class="score-input knockout-score-input" type="number" inputmode="numeric" min="0" max="99" data-knockout-match-id="${match.id}" data-side="awayScore" value="${hasPrediction ? prediction.awayScore : ""}" ${lockInfo.locked ? "disabled" : ""} />
+      </div>
+      <button class="save-button knockout-save-button" type="button" data-knockout-save-match="${match.id}" ${lockInfo.locked ? "disabled" : ""}>
+        ${hasPrediction ? "Modificar palpite" : "Confirmar palpite"}
+      </button>
+      <small class="knockout-deadline">${lockInfo.locked ? "Palpite encerrado" : `Liberado até ${formatDate(lockInfo.deadline)}`}</small>
+    </article>
+  `;
+}
+
+function selectKnockoutPlayer(playerKey) {
+  const player = knockoutPlayers.find((candidate) => candidate.playerKey === playerKey);
+
+  if (!player) {
+    showToast("Participante não encontrado.");
+    return;
+  }
+
+  selectedKnockoutPlayer = player;
+  activeKnockoutPlayer = null;
+  activeKnockoutPassword = "";
+  renderKnockoutPredictionScreen();
+  document.querySelector("#knockout-password-input")?.focus();
+}
+
+async function authenticateKnockoutPlayer() {
+  if (!selectedKnockoutPlayer) {
+    return;
+  }
+
+  const password = document.querySelector("#knockout-password-input")?.value || "";
+
+  if (password.length < 3) {
+    showToast("Informe uma senha com pelo menos 3 caracteres.");
+    return;
+  }
+
+  const passwordField = selectedKnockoutPlayer.hasPassword ? "password" : "newPassword";
+
+  try {
+    const response = await fetch("/api/knockout/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playerName: selectedKnockoutPlayer.playerName,
+        [passwordField]: password
+      })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Não foi possível abrir a cartela.");
+    }
+
+    activeKnockoutPlayer = data.player;
+    activeKnockoutPassword = password;
+    knockoutPredictions[activeKnockoutPlayer.playerKey] = {
+      predictions: data.predictions || {},
+      updatedAt: new Date().toISOString()
+    };
+    knockoutPlayers = knockoutPlayers.map((savedPlayer) => (
+      savedPlayer.playerKey === activeKnockoutPlayer.playerKey
+        ? { ...savedPlayer, hasPassword: true }
+        : savedPlayer
+    ));
+    selectedKnockoutPlayer = {
+      ...activeKnockoutPlayer,
+      hasPassword: true
+    };
+    renderKnockoutPredictionScreen();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function saveKnockoutPrediction(matchId) {
+  if (!activeKnockoutPlayer) {
+    showToast("Escolha seu chibi primeiro.");
+    return;
+  }
+
+  const row = knockoutPredictionContent.querySelector(`[data-knockout-match-row="${CSS.escape(matchId)}"]`);
+  const homeInput = row?.querySelector('[data-side="homeScore"]');
+  const awayInput = row?.querySelector('[data-side="awayScore"]');
+  const homeScore = Number(homeInput?.value);
+  const awayScore = Number(awayInput?.value);
+
+  if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
+    showToast("Preencha um placar válido.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/knockout/predictions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playerName: activeKnockoutPlayer.playerName,
+        password: activeKnockoutPassword,
+        predictions: {
+          [matchId]: { homeScore, awayScore }
+        }
+      })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Não foi possível salvar o palpite.");
+    }
+
+    knockoutPredictions[activeKnockoutPlayer.playerKey] = {
+      predictions: data.predictions || {},
+      updatedAt: new Date().toISOString()
+    };
+    renderKnockoutPredictionScreen();
+    showToast("Palpite salvo com sucesso.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function calculateKnockoutRanking(scoredMatches = getScoredKnockoutMatches()) {
+  const entries = knockoutPlayers.map((player) => scoreKnockoutPlayer(player, scoredMatches));
+  entries.sort(compareRankingEntries);
+
+  return entries.map((entry, index, sortedEntries) => ({
+    ...entry,
+    rank: getCompetitionRank(sortedEntries, index)
+  }));
+}
+
+function calculateKnockoutRankingWithMovement(scoredMatches = getScoredKnockoutMatches()) {
+  const currentRanking = calculateKnockoutRanking(scoredMatches);
+  const latestBlock = getLatestKnockoutUpdatedBlock(scoredMatches);
+
+  if (!latestBlock.matches.length || scoredMatches.length <= latestBlock.matches.length) {
+    return currentRanking.map((entry) => ({ ...entry, movement: 0 }));
+  }
+
+  const latestBlockIds = new Set(latestBlock.matches.map((match) => match.id));
+  const previousRanking = calculateKnockoutRanking(
+    scoredMatches.filter((match) => !latestBlockIds.has(match.id))
+  );
+  const previousRanks = new Map(previousRanking.map((entry) => [entry.id, entry.rank]));
+
+  return currentRanking.map((entry) => ({
+    ...entry,
+    movement: (previousRanks.get(entry.id) || entry.rank) - entry.rank
+  }));
+}
+
+function scoreKnockoutPlayer(player, scoredMatches) {
+  const playerPredictionData = knockoutPredictions[player.playerKey]?.predictions || {};
+  const details = scoredMatches.map((match) => {
+    const prediction = playerPredictionData[match.id] || { homeScore: 0, awayScore: 0 };
+    const result = knockoutResults[match.id];
+    const score = scorePrediction(prediction, result);
+
+    return {
+      match,
+      prediction,
+      result,
+      ...score
+    };
+  });
+
+  return {
+    id: player.playerKey,
+    playerName: player.playerName,
+    played: details.length,
+    total: details.reduce((sum, detail) => sum + detail.points, 0),
+    counts: {
+      complete: details.filter((detail) => detail.type === "complete").length,
+      intermediate: details.filter((detail) => detail.type === "intermediate").length,
+      basic: details.filter((detail) => detail.type === "basic").length,
+      inverted: details.filter((detail) => detail.type === "inverted").length,
+      none: details.filter((detail) => detail.type === "none").length
+    },
+    details
+  };
+}
+
+function getScoredKnockoutMatches() {
+  return knockoutMatches.filter((match) => {
+    const result = knockoutResults[match.id];
+    return Number.isInteger(result?.homeScore) && Number.isInteger(result?.awayScore);
+  });
+}
+
+function getLatestKnockoutUpdatedBlock(scoredMatches = getScoredKnockoutMatches()) {
+  const latestMatch = scoredMatches.reduce((currentLatestMatch, match) => {
+    if (!currentLatestMatch) {
+      return match;
+    }
+
+    const currentUpdatedAt = Date.parse(knockoutResults[match.id]?.updatedAt || "") || 0;
+    const latestUpdatedAt = Date.parse(knockoutResults[currentLatestMatch.id]?.updatedAt || "") || 0;
+
+    return currentUpdatedAt >= latestUpdatedAt ? match : currentLatestMatch;
+  }, null);
+
+  if (!latestMatch) {
+    return { latestMatch: null, matches: [], updatedAt: null };
+  }
+
+  const latestBlockKey = getKnockoutBlockKey(latestMatch);
+  const matches = scoredMatches.filter((match) => getKnockoutBlockKey(match) === latestBlockKey);
+  const updatedAt = matches.reduce((latestUpdatedAt, match) => {
+    const matchUpdatedAt = Date.parse(knockoutResults[match.id]?.updatedAt || "") || 0;
+
+    return matchUpdatedAt > latestUpdatedAt ? matchUpdatedAt : latestUpdatedAt;
+  }, 0);
+
+  return {
+    latestMatch,
+    matches,
+    updatedAt: updatedAt ? new Date(updatedAt).toISOString() : knockoutResults[latestMatch.id]?.updatedAt || null
+  };
+}
+
+function getKnockoutBlockKey(match) {
+  const date = new Date(match.date);
+
+  if (Number.isNaN(date.getTime())) {
+    return `${match.date || ""}|${match.id}`;
+  }
+
+  return date.toISOString().slice(0, 16);
+}
+
+function compareKnockoutMatches(firstMatch, secondMatch) {
+  return Date.parse(firstMatch.date || "") - Date.parse(secondMatch.date || "");
+}
+
+function getKnockoutLockInfo(match) {
+  const kickoff = Date.parse(match.date || "");
+
+  if (!Number.isFinite(kickoff)) {
+    return { locked: false, deadline: null };
+  }
+
+  const deadline = kickoff - 10 * 60 * 1000;
+
+  return {
+    locked: Date.now() >= deadline,
+    deadline: new Date(deadline).toISOString()
+  };
+}
+
+function formatKnockoutDate(match) {
+  const date = new Date(match.date || "");
+
+  if (Number.isNaN(date.getTime())) {
+    return "Data a definir";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long"
+  }).format(date);
+}
+
+function formatKnockoutTime(match) {
+  const date = new Date(match.date || "");
+
+  if (Number.isNaN(date.getTime())) {
+    return "Horário a definir";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function renderCurrentGame() {
@@ -1661,6 +2281,17 @@ function setFollowTab(tabName) {
   });
 }
 
+function setKnockoutTab(tabName) {
+  const isCurrent = tabName === "current";
+
+  knockoutCurrentTab.classList.toggle("hidden", !isCurrent);
+  knockoutRankingTab.classList.toggle("hidden", isCurrent);
+
+  document.querySelectorAll("[data-knockout-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.knockoutTab === tabName);
+  });
+}
+
 function editCartela(cartelaId) {
   const cartela = cartelas.find((savedCartela) => savedCartela.id === cartelaId);
 
@@ -1902,9 +2533,11 @@ function formatPrediction(prediction) {
   return `${prediction.homeScore}x${prediction.awayScore}`;
 }
 
-function createChibiContext(entries = []) {
-  const latestBlock = getLatestUpdatedMatchBlock();
-  const latestMatchIds = latestBlock.matches.map((match) => match.id);
+function createChibiContext(entries = [], currentMatches = null) {
+  const latestMatches = Array.isArray(currentMatches)
+    ? currentMatches
+    : getLatestUpdatedMatchBlock().matches;
+  const latestMatchIds = latestMatches.map((match) => match.id);
   const orderedEntries = [...entries];
   const mateKeysInSequence = new Set();
   const tableIndexByKey = new Map();

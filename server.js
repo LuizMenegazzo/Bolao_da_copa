@@ -1,7 +1,7 @@
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
-const { randomUUID } = require("crypto");
+const { pbkdf2Sync, randomBytes, randomUUID, timingSafeEqual } = require("crypto");
 const storage = require("./storage");
 const { createScoreSync } = require("./score-sync");
 
@@ -9,6 +9,17 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MATCHES_FILE = path.join(__dirname, "data", "matches.js");
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ESPN_SCOREBOARD_BASE_URL =
+  process.env.ESPN_SCOREBOARD_URL ||
+  "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const KNOCKOUT_FETCH_DAYS = Number(process.env.KNOCKOUT_FETCH_DAYS || 30);
+
+const KNOCKOUT_PLAYERS = [
+  "Celso", "Criciele", "Cris", "Gustavo", "Gabriel",
+  "Jeff", "Vandrei", "João Lauro", "Laura", "Thieli",
+  "Anderson", "Amandinha", "Luiz", "Daniel", "Carla",
+  "PC", "Nelson", "Dion", "Lucas", "Vinicius"
+];
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -59,6 +70,227 @@ function getAllMatches() {
 }
 
 const scoreSync = createScoreSync({ storage, getAllMatches });
+
+function getPlayerKey(playerName) {
+  return String(playerName || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
+
+function getPublicKnockoutPlayers(playersByKey = {}) {
+  return KNOCKOUT_PLAYERS.map((playerName) => {
+    const playerKey = getPlayerKey(playerName);
+    const savedPlayer = playersByKey[playerKey];
+
+    return {
+      playerKey,
+      playerName,
+      hasPassword: Boolean(savedPlayer?.passwordHash)
+    };
+  });
+}
+
+function hashPassword(password, salt = randomBytes(16).toString("hex")) {
+  const hash = pbkdf2Sync(String(password), salt, 120000, 32, "sha256").toString("hex");
+  return { hash, salt };
+}
+
+function verifyPassword(password, savedPlayer) {
+  if (!savedPlayer?.passwordHash || !savedPlayer?.passwordSalt) {
+    return false;
+  }
+
+  const { hash } = hashPassword(password, savedPlayer.passwordSalt);
+  const providedHash = Buffer.from(hash, "hex");
+  const expectedHash = Buffer.from(savedPlayer.passwordHash, "hex");
+
+  return providedHash.length === expectedHash.length && timingSafeEqual(providedHash, expectedHash);
+}
+
+function getKnockoutFetchDates() {
+  const dates = [];
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+
+  for (let dayOffset = 0; dayOffset <= KNOCKOUT_FETCH_DAYS; dayOffset += 1) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + dayOffset);
+    dates.push(date.toISOString().slice(0, 10).replace(/-/g, ""));
+  }
+
+  return dates;
+}
+
+async function fetchEspnKnockoutMatches() {
+  if (typeof fetch !== "function") {
+    throw new Error("Fetch não está disponível nesta versão do Node.");
+  }
+
+  const eventLists = await Promise.all(getKnockoutFetchDates().map(async (dateKey) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const response = await fetch(`${ESPN_SCOREBOARD_BASE_URL}?dates=${dateKey}`, {
+        headers: { "Accept": "application/json" },
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const data = await response.json();
+
+      if (Array.isArray(data.events)) {
+        return data.events;
+      }
+
+      return [];
+    } catch (error) {
+      return [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  }));
+
+  const events = eventLists.flat();
+
+  return events.map(mapEspnKnockoutMatch).filter(Boolean);
+}
+
+function mapEspnKnockoutMatch(event) {
+  const competition = event.competitions?.[0];
+  const competitors = competition?.competitors;
+
+  if (!Array.isArray(competitors) || competitors.length < 2) {
+    return null;
+  }
+
+  const homeCompetitor = competitors.find((competitor) => competitor.homeAway === "home") || competitors[0];
+  const awayCompetitor = competitors.find((competitor) => competitor.homeAway === "away") || competitors[1];
+  const home = getEspnTeamName(homeCompetitor?.team);
+  const away = getEspnTeamName(awayCompetitor?.team);
+
+  if (!home || !away) {
+    return null;
+  }
+
+  const status = event.status?.type || competition.status?.type || {};
+  const homeScore = Number(homeCompetitor.score);
+  const awayScore = Number(awayCompetitor.score);
+
+  return {
+    id: `espn-${event.id}`,
+    espnId: String(event.id || ""),
+    home,
+    away,
+    date: event.date || competition.date,
+    round: event.season?.slug || event.season?.type || event.shortName || "Mata-mata",
+    status: status.description || status.detail || "",
+    state: status.state || "",
+    completed: Boolean(status.completed),
+    homeScore: Number.isInteger(homeScore) ? homeScore : null,
+    awayScore: Number.isInteger(awayScore) ? awayScore : null
+  };
+}
+
+function getEspnTeamName(team) {
+  return team?.displayName || team?.shortDisplayName || team?.name || team?.location || "";
+}
+
+async function syncKnockoutFromEspn() {
+  const fetchedMatches = await fetchEspnKnockoutMatches();
+
+  if (fetchedMatches.length) {
+    await storage.upsertKnockoutMatches(fetchedMatches);
+
+    const resultsPatch = {};
+
+    for (const match of fetchedMatches) {
+      if (isKnockoutResultReady(match)) {
+        resultsPatch[match.id] = {
+          homeScore: match.homeScore,
+          awayScore: match.awayScore
+        };
+      }
+    }
+
+    if (Object.keys(resultsPatch).length) {
+      await storage.updateKnockoutResults(resultsPatch);
+    }
+  }
+
+  return {
+    matches: await storage.getKnockoutMatches(),
+    results: await storage.getKnockoutResults(),
+    syncedAt: new Date().toISOString()
+  };
+}
+
+function isKnockoutResultReady(match) {
+  const state = String(match.state || "").toLowerCase();
+
+  return (
+    (match.completed || state === "in" || state === "live" || state === "post") &&
+    Number.isInteger(match.homeScore) &&
+    Number.isInteger(match.awayScore)
+  );
+}
+
+function getPredictionLockInfo(match) {
+  const kickoff = Date.parse(match.date || "");
+
+  if (!Number.isFinite(kickoff)) {
+    return { locked: false, deadline: null };
+  }
+
+  const deadline = kickoff - 10 * 60 * 1000;
+
+  return {
+    locked: Date.now() >= deadline,
+    deadline: new Date(deadline).toISOString()
+  };
+}
+
+function validateKnockoutPredictionPatch(payload, matches) {
+  const predictions = payload.predictions;
+
+  if (!predictions || typeof predictions !== "object") {
+    return { error: "Envie os palpites do mata-mata." };
+  }
+
+  const matchesById = new Map(matches.map((match) => [match.id, match]));
+  const validPredictions = {};
+
+  for (const [matchId, prediction] of Object.entries(predictions)) {
+    const match = matchesById.get(matchId);
+
+    if (!match) {
+      return { error: `Jogo inválido: ${matchId}.` };
+    }
+
+    const lockInfo = getPredictionLockInfo(match);
+
+    if (lockInfo.locked) {
+      return { error: `Palpites encerrados para ${match.home} x ${match.away}.` };
+    }
+
+    const homeScore = Number(prediction?.homeScore);
+    const awayScore = Number(prediction?.awayScore);
+
+    if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
+      return { error: `Informe um placar válido para ${match.home} x ${match.away}.` };
+    }
+
+    validPredictions[matchId] = { homeScore, awayScore };
+  }
+
+  return { predictions: validPredictions };
+}
 
 function readRequestBody(request) {
   if (request.body && typeof request.body === "object") {
@@ -229,6 +461,12 @@ async function handleApiRequest(request, response, pathname) {
         groups: loadGroups(),
         cartelas: await storage.getCartelas(),
         results: await storage.getResults(),
+        knockout: {
+          players: getPublicKnockoutPlayers(await storage.getKnockoutPlayers()),
+          matches: await storage.getKnockoutMatches(),
+          predictions: await storage.getKnockoutPredictions(),
+          results: await storage.getKnockoutResults()
+        },
         sync: scoreSync.getStatus()
       });
       return;
@@ -247,6 +485,129 @@ async function handleApiRequest(request, response, pathname) {
 
     if (request.method === "GET" && pathname === "/api/sync/status") {
       sendJson(response, 200, { sync: scoreSync.getStatus() });
+      return;
+    }
+
+    if (request.method === "GET" && pathname === "/api/knockout/state") {
+      let knockoutState;
+
+      try {
+        knockoutState = await syncKnockoutFromEspn();
+      } catch (error) {
+        console.warn("Não foi possível sincronizar o mata-mata pela ESPN.", error.message);
+        knockoutState = {
+          matches: await storage.getKnockoutMatches(),
+          results: await storage.getKnockoutResults(),
+          syncedAt: null,
+          syncError: error.message
+        };
+      }
+
+      const playersByKey = await storage.getKnockoutPlayers();
+      const predictions = await storage.getKnockoutPredictions();
+
+      sendJson(response, 200, {
+        players: getPublicKnockoutPlayers(playersByKey),
+        matches: knockoutState.matches.map((match) => ({
+          ...match,
+          lock: getPredictionLockInfo(match)
+        })),
+        results: knockoutState.results,
+        predictions,
+        syncedAt: knockoutState.syncedAt,
+        syncError: knockoutState.syncError
+      });
+      return;
+    }
+
+    if (request.method === "POST" && pathname === "/api/knockout/session") {
+      const payload = await readRequestBody(request);
+      const playerKey = getPlayerKey(payload.playerName);
+      const playerName = KNOCKOUT_PLAYERS.find((name) => getPlayerKey(name) === playerKey);
+
+      if (!playerName) {
+        sendJson(response, 400, { error: "Participante inválido." });
+        return;
+      }
+
+      const playersByKey = await storage.getKnockoutPlayers();
+      const savedPlayer = playersByKey[playerKey];
+
+      if (!savedPlayer?.passwordHash) {
+        const newPassword = String(payload.newPassword || "");
+
+        if (newPassword.length < 3) {
+          sendJson(response, 400, { error: "Crie uma senha com pelo menos 3 caracteres." });
+          return;
+        }
+
+        const { hash, salt } = hashPassword(newPassword);
+        await storage.upsertKnockoutPlayer({
+          playerKey,
+          playerName,
+          passwordHash: hash,
+          passwordSalt: salt
+        });
+      } else if (!verifyPassword(payload.password || "", savedPlayer)) {
+        sendJson(response, 401, { error: "Senha inválida para essa cartela." });
+        return;
+      }
+
+      const allPredictions = await storage.getKnockoutPredictions();
+
+      sendJson(response, 200, {
+        player: {
+          playerKey,
+          playerName,
+          hasPassword: true
+        },
+        predictions: allPredictions[playerKey]?.predictions || {}
+      });
+      return;
+    }
+
+    if (request.method === "PUT" && pathname === "/api/knockout/predictions") {
+      const payload = await readRequestBody(request);
+      const playerKey = getPlayerKey(payload.playerName);
+      const playerName = KNOCKOUT_PLAYERS.find((name) => getPlayerKey(name) === playerKey);
+
+      if (!playerName) {
+        sendJson(response, 400, { error: "Participante inválido." });
+        return;
+      }
+
+      const playersByKey = await storage.getKnockoutPlayers();
+      const savedPlayer = playersByKey[playerKey];
+
+      if (!verifyPassword(payload.password || "", savedPlayer)) {
+        sendJson(response, 401, { error: "Senha inválida para essa cartela." });
+        return;
+      }
+
+      const matches = await storage.getKnockoutMatches();
+      const validation = validateKnockoutPredictionPatch(payload, matches);
+
+      if (validation.error) {
+        sendJson(response, 400, { error: validation.error });
+        return;
+      }
+
+      const allPredictions = await storage.getKnockoutPredictions();
+      const currentPredictions = allPredictions[playerKey]?.predictions || {};
+      const nextPredictions = {
+        ...currentPredictions,
+        ...validation.predictions
+      };
+      const savedPredictions = await storage.updateKnockoutPredictions(playerKey, nextPredictions);
+
+      sendJson(response, 200, {
+        player: {
+          playerKey,
+          playerName,
+          hasPassword: true
+        },
+        predictions: savedPredictions.predictions
+      });
       return;
     }
 
