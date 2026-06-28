@@ -323,6 +323,40 @@ async function upsertKnockoutPlayer(player) {
   return mapKnockoutPlayerRow(rows[0]);
 }
 
+async function resetKnockoutPlayerPassword(playerKey, playerName) {
+  const database = getPool();
+
+  if (!database) {
+    const players = readJsonFile(KNOCKOUT_PLAYERS_FILE, {});
+    players[playerKey] = {
+      ...players[playerKey],
+      playerKey,
+      playerName,
+      passwordHash: null,
+      passwordSalt: null,
+      updatedAt: new Date().toISOString()
+    };
+    writeJsonFile(KNOCKOUT_PLAYERS_FILE, players);
+    return players[playerKey];
+  }
+
+  const { rows } = await database.query(
+    `
+      INSERT INTO knockout_players (player_key, player_name, password_hash, password_salt, created_at, updated_at)
+      VALUES ($1, $2, NULL, NULL, NOW(), NOW())
+      ON CONFLICT (player_key)
+      DO UPDATE SET player_name = EXCLUDED.player_name,
+                    password_hash = NULL,
+                    password_salt = NULL,
+                    updated_at = NOW()
+      RETURNING player_key, player_name, password_hash, password_salt, created_at, updated_at
+    `,
+    [playerKey, playerName]
+  );
+
+  return mapKnockoutPlayerRow(rows[0]);
+}
+
 async function getKnockoutPredictions() {
   const database = getPool();
 
@@ -575,6 +609,7 @@ module.exports = {
   updateResults,
   getKnockoutPlayers,
   upsertKnockoutPlayer,
+  resetKnockoutPlayerPassword,
   getKnockoutPredictions,
   updateKnockoutPredictions,
   getKnockoutMatches,

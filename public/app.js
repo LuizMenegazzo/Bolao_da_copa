@@ -382,6 +382,16 @@ knockoutPredictionContent.addEventListener("click", async (event) => {
   }
 });
 
+knockoutAdminContent.addEventListener("click", async (event) => {
+  const resetButton = event.target.closest("button[data-reset-knockout-password]");
+
+  if (!resetButton) {
+    return;
+  }
+
+  await resetKnockoutPassword(resetButton.dataset.resetKnockoutPassword);
+});
+
 document.querySelectorAll("[data-follow-tab]").forEach((button) => {
   button.addEventListener("click", () => {
     setFollowTab(button.dataset.followTab);
@@ -722,11 +732,51 @@ function renderKnockoutAdminPasswords(players) {
             <strong>${escapeHtml(player.playerName)}</strong>
             <span>${player.hasPassword ? "Senha criada" : "Ainda sem senha"}</span>
             <small>${escapeHtml(player.password || "Aguardando primeiro acesso")}</small>
+            <button
+              class="ghost-button admin-reset-button"
+              type="button"
+              data-reset-knockout-password="${escapeHtml(player.playerKey)}"
+              ${player.hasPassword ? "" : "disabled"}
+            >
+              Redefinir senha
+            </button>
           </div>
         </article>
       `).join("")}
     </div>
   `;
+}
+
+async function resetKnockoutPassword(playerKey) {
+  const resetButton = knockoutAdminContent.querySelector(`[data-reset-knockout-password="${CSS.escape(playerKey)}"]`);
+  const playerCard = resetButton?.closest(".admin-password-card");
+  const playerName = playerCard?.querySelector("strong")?.textContent || "participante";
+  const confirmed = window.confirm(`Deixar ${playerName} sem senha para criar uma nova no próximo acesso?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/knockout/admin/passwords/${encodeURIComponent(playerKey)}`, {
+      method: "DELETE",
+      headers: getAdminHeaders()
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAdminPassword();
+      }
+
+      throw new Error(data.error || "Não foi possível redefinir a senha.");
+    }
+
+    showToast(`Senha de ${data.player.playerName} redefinida.`);
+    await loadKnockoutAdminData();
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function renderKnockoutFollowDashboard() {

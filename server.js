@@ -438,6 +438,7 @@ function serveStaticFile(response, pathname) {
 
 async function handleApiRequest(request, response, pathname) {
   const cartelaIdMatch = pathname.match(/^\/api\/cartelas\/([^/]+)$/);
+  const knockoutPasswordResetMatch = pathname.match(/^\/api\/knockout\/admin\/passwords\/([^/]+)$/);
 
   try {
     if (request.method === "GET" && pathname === "/api/matches") {
@@ -655,6 +656,32 @@ async function handleApiRequest(request, response, pathname) {
             updatedAt: savedPlayer?.updatedAt
           };
         })
+      });
+      return;
+    }
+
+    if (request.method === "DELETE" && knockoutPasswordResetMatch) {
+      if (!requireAdmin(request, response)) {
+        return;
+      }
+
+      const playerKey = decodeURIComponent(knockoutPasswordResetMatch[1]);
+      const player = KNOCKOUT_PLAYERS.find((currentPlayer) => currentPlayer.key === playerKey);
+
+      if (!player) {
+        sendJson(response, 404, { error: "Participante não encontrado." });
+        return;
+      }
+
+      await storage.resetKnockoutPlayerPassword(player.key, player.name);
+
+      sendJson(response, 200, {
+        player: {
+          playerKey: player.key,
+          playerName: player.name,
+          hasPassword: false,
+          passwordStatus: "Sem senha"
+        }
       });
       return;
     }

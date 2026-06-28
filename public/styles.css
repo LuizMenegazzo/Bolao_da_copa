@@ -124,6 +124,15 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.season-menu-panel .main-action {
+  display: grid;
+  align-content: center;
+}
+
+.season-menu-panel .main-action span {
+  margin-bottom: 0;
+}
+
 .main-action {
   min-height: 164px;
   padding: 24px;
@@ -760,6 +769,17 @@ button {
 .admin-password-card small {
   margin-top: 3px;
   color: var(--muted);
+}
+
+.admin-reset-button {
+  margin-top: 10px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+}
+
+.admin-reset-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .admin-password-chibi {
