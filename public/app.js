@@ -50,7 +50,8 @@ const SCORE_LABELS = {
   intermediate: "Acerto intermediário",
   basic: "Acerto básico",
   inverted: "Acerto invertido",
-  none: "Nenhum acerto"
+  none: "Nenhum acerto",
+  pending: "Aguardando placar"
 };
 
 const TEAM_FLAGS = {
@@ -786,17 +787,17 @@ function renderKnockoutFollowDashboard() {
 }
 
 function renderKnockoutCurrentGame() {
-  const currentBlock = getLatestKnockoutUpdatedBlock();
+  const currentBlock = getCurrentKnockoutDisplayBlock();
   const currentMatches = currentBlock.matches;
 
   if (!currentMatches.length) {
-    knockoutCurrentContent.innerHTML = '<p class="empty-state">Ainda não há placar oficial no mata-mata.</p>';
+    knockoutCurrentContent.innerHTML = '<p class="empty-state">Ainda não há jogo com palpites encerrados no mata-mata.</p>';
     return;
   }
 
   const participants = knockoutRankingEntries.map((entry) => {
     const currentDetails = currentMatches
-      .map((match) => entry.details.find((detail) => detail.match.id === match.id))
+      .map((match) => getKnockoutCurrentDetail(entry, match))
       .filter(Boolean);
 
     return {
@@ -806,7 +807,10 @@ function renderKnockoutCurrentGame() {
     };
   });
   const chibiContext = createChibiContext(participants, currentMatches);
-  const updatedAt = currentBlock.updatedAt ? formatDate(currentBlock.updatedAt) : "Horário não informado";
+  const statusLabel = currentBlock.hasResult ? "Bloco atualizado" : "Palpites encerrados";
+  const statusTime = currentBlock.hasResult
+    ? `Atualizado em ${escapeHtml(formatDate(currentBlock.updatedAt))}`
+    : `Palpites encerrados em ${escapeHtml(formatDate(currentBlock.lockedAt))}`;
   const blockLabel = currentMatches.length > 1
     ? `${formatKnockoutDate(currentMatches[0])} • ${formatKnockoutTime(currentMatches[0])} • ${currentMatches.length} jogos simultâneos`
     : `${formatKnockoutDate(currentMatches[0])} • ${formatKnockoutTime(currentMatches[0])} • Mata-mata`;
@@ -814,13 +818,13 @@ function renderKnockoutCurrentGame() {
   knockoutCurrentContent.innerHTML = `
     <section class="current-match-hero">
       <div class="current-match-meta">
-        <span class="live-pill">⚽ Último bloco atualizado</span>
+        <span class="live-pill">${statusLabel}</span>
         <span>${blockLabel}</span>
       </div>
       <div class="current-match-scoreboards">
         ${currentMatches.map((match) => renderKnockoutMatchScoreboard(match)).join("")}
       </div>
-      <small>Atualizado em ${escapeHtml(updatedAt)}</small>
+      <small>${statusTime}</small>
     </section>
 
     <section class="current-participants-section">
@@ -840,17 +844,18 @@ function renderKnockoutCurrentGame() {
 
 function renderKnockoutMatchScoreboard(match) {
   const result = knockoutResults[match.id];
+  const hasResult = hasKnockoutResult(match);
 
   return `
     <article class="current-match-scoreboard">
       <div class="current-match-team current-match-flag-team home">${formatTeamFlagOnly(match.home)}</div>
-      <div class="current-match-score">
-        <strong>${result.homeScore}</strong>
+      <div class="current-match-score ${hasResult ? "" : "pending"}">
+        <strong>${hasResult ? result.homeScore : "—"}</strong>
         <span>x</span>
-        <strong>${result.awayScore}</strong>
+        <strong>${hasResult ? result.awayScore : "—"}</strong>
       </div>
       <div class="current-match-team current-match-flag-team away">${formatTeamFlagOnly(match.away)}</div>
-      <small>${formatKnockoutDate(match)} • ${formatKnockoutTime(match)} • Mata-mata</small>
+      <small>${formatKnockoutDate(match)} • ${formatKnockoutTime(match)} • ${hasResult ? "Mata-mata" : "Aguardando placar"}</small>
     </article>
   `;
 }
@@ -1186,10 +1191,12 @@ function scoreKnockoutPlayer(player, scoredMatches) {
 }
 
 function getScoredKnockoutMatches() {
-  return knockoutMatches.filter((match) => {
-    const result = knockoutResults[match.id];
-    return Number.isInteger(result?.homeScore) && Number.isInteger(result?.awayScore);
-  });
+  return knockoutMatches.filter((match) => hasKnockoutResult(match));
+}
+
+function hasKnockoutResult(match) {
+  const result = knockoutResults[match.id];
+  return Number.isInteger(result?.homeScore) && Number.isInteger(result?.awayScore);
 }
 
 function getLatestKnockoutUpdatedBlock(scoredMatches = getScoredKnockoutMatches()) {
@@ -1220,6 +1227,77 @@ function getLatestKnockoutUpdatedBlock(scoredMatches = getScoredKnockoutMatches(
     latestMatch,
     matches,
     updatedAt: updatedAt ? new Date(updatedAt).toISOString() : knockoutResults[latestMatch.id]?.updatedAt || null
+  };
+}
+
+function getCurrentKnockoutDisplayBlock() {
+  const lockedBlock = getLatestKnockoutLockedBlock();
+
+  if (lockedBlock.matches.length) {
+    return lockedBlock;
+  }
+
+  const updatedBlock = getLatestKnockoutUpdatedBlock();
+
+  return {
+    ...updatedBlock,
+    hasResult: Boolean(updatedBlock.matches.length),
+    lockedAt: null
+  };
+}
+
+function getLatestKnockoutLockedBlock() {
+  const lockedMatches = knockoutMatches.filter((match) => getKnockoutLockInfo(match).locked);
+  const latestMatch = lockedMatches.reduce((currentLatestMatch, match) => {
+    if (!currentLatestMatch) {
+      return match;
+    }
+
+    return Date.parse(match.date || "") >= Date.parse(currentLatestMatch.date || "") ? match : currentLatestMatch;
+  }, null);
+
+  if (!latestMatch) {
+    return { latestMatch: null, matches: [], updatedAt: null, lockedAt: null, hasResult: false };
+  }
+
+  const latestBlockKey = getKnockoutBlockKey(latestMatch);
+  const matches = knockoutMatches.filter((match) => getKnockoutBlockKey(match) === latestBlockKey);
+  const updatedAt = matches.reduce((latestUpdatedAt, match) => {
+    const matchUpdatedAt = Date.parse(knockoutResults[match.id]?.updatedAt || "") || 0;
+
+    return matchUpdatedAt > latestUpdatedAt ? matchUpdatedAt : latestUpdatedAt;
+  }, 0);
+  const lockedAt = matches.reduce((latestDeadline, match) => {
+    const deadline = Date.parse(getKnockoutLockInfo(match).deadline || "") || 0;
+
+    return deadline > latestDeadline ? deadline : latestDeadline;
+  }, 0);
+
+  return {
+    latestMatch,
+    matches,
+    updatedAt: updatedAt ? new Date(updatedAt).toISOString() : null,
+    lockedAt: lockedAt ? new Date(lockedAt).toISOString() : null,
+    hasResult: matches.some((match) => hasKnockoutResult(match))
+  };
+}
+
+function getKnockoutCurrentDetail(entry, match) {
+  const savedDetail = entry.details?.find((detail) => detail.match.id === match.id);
+
+  if (savedDetail) {
+    return savedDetail;
+  }
+
+  const prediction = knockoutPredictions[entry.id]?.predictions?.[match.id] || null;
+
+  return {
+    match,
+    prediction,
+    result: hasKnockoutResult(match) ? knockoutResults[match.id] : null,
+    type: "pending",
+    points: 0,
+    pending: true
   };
 }
 
@@ -1386,6 +1464,10 @@ function renderCurrentParticipant(entry, chibiContext) {
 function getCurrentBlockScoreType(details) {
   if (!details.length) {
     return "none";
+  }
+
+  if (details.every((detail) => detail.type === "pending")) {
+    return "pending";
   }
 
   if (details.some((detail) => detail.type === "inverted")) {

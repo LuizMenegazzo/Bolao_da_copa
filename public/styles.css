@@ -386,6 +386,10 @@ button {
   font-weight: 900;
 }
 
+.current-match-score.pending strong {
+  color: rgba(255, 255, 255, 0.72);
+}
+
 .current-participants-section {
   display: grid;
   min-width: 0;
@@ -445,6 +449,10 @@ button {
 .current-participant-card.inverted {
   border-left-color: #ff5c68;
   background: #fff8f8;
+}
+
+.current-participant-card.pending {
+  border-left-color: #8d86ad;
 }
 
 .current-participant-player {
