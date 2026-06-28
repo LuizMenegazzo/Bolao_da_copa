@@ -1682,9 +1682,12 @@ function formatCurrentBlockPredictions(details) {
     <span class="current-block-predictions">
       ${details.map((detail) => `
         <span class="current-prediction-match">
-          ${formatTeamFlagTiny(detail.match.home)}
-          <span>${formatPrediction(detail.prediction)}${formatAdvancePrediction(detail.prediction, detail.match)}</span>
-          ${formatTeamFlagTiny(detail.match.away)}
+          <span class="current-prediction-score-line">
+            ${formatTeamFlagTiny(detail.match.home)}
+            <span>${formatPrediction(detail.prediction)}</span>
+            ${formatTeamFlagTiny(detail.match.away)}
+          </span>
+          ${formatAdvancePrediction(detail.prediction, detail.match)}
         </span>
       `).join("")}
     </span>
@@ -1697,7 +1700,7 @@ function formatAdvancePrediction(prediction, match) {
   }
 
   const teamName = prediction.advanceSide === "home" ? match.home : match.away;
-  return ` • pênaltis: ${escapeHtml(teamName)}`;
+  return `<small class="current-penalty-pick">Pênaltis: ${formatTeamFlagTiny(teamName)} ${escapeHtml(teamName)}</small>`;
 }
 
 async function fetchCartelas() {

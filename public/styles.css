@@ -625,11 +625,35 @@ button {
 }
 
 .current-prediction-match {
+  display: inline-grid;
+  justify-items: center;
+  max-width: 100%;
+  gap: 4px;
+}
+
+.current-prediction-score-line {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   white-space: nowrap;
+}
+
+.current-penalty-pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.current-penalty-pick .prediction-flag {
+  width: 16px;
+  height: 11px;
 }
 
 .prediction-flag {
