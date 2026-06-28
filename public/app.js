@@ -1,4 +1,7 @@
+const seasonMenuScreen = document.querySelector("#season-menu-screen");
 const homeScreen = document.querySelector("#home-screen");
+const knockoutFollowScreen = document.querySelector("#knockout-follow-screen");
+const knockoutPredictionsScreen = document.querySelector("#knockout-predictions-screen");
 const currentGameScreen = document.querySelector("#current-game-screen");
 const addCardScreen = document.querySelector("#add-card-screen");
 const updateScoresScreen = document.querySelector("#update-scores-screen");
@@ -189,6 +192,18 @@ let rankingEntries = [];
 let personalEntries = [];
 let scoreSyncStatus = null;
 
+document.querySelector('[data-screen="group-history"]').addEventListener("click", () => {
+  showScreen(homeScreen);
+});
+
+document.querySelector('[data-screen="knockout-follow"]').addEventListener("click", () => {
+  showScreen(knockoutFollowScreen);
+});
+
+document.querySelector('[data-screen="knockout-predictions"]').addEventListener("click", () => {
+  showScreen(knockoutPredictionsScreen);
+});
+
 document.querySelector('[data-screen="current-game"]').addEventListener("click", async () => {
   showScreen(currentGameScreen);
   await loadCurrentGameData();
@@ -230,6 +245,18 @@ document.querySelector('[data-screen="follow-pool"]').addEventListener("click", 
 });
 
 backupDataButton.addEventListener("click", downloadBackup);
+
+document.querySelector("#back-season-menu").addEventListener("click", () => {
+  showScreen(seasonMenuScreen);
+});
+
+document.querySelector("#back-season-menu-knockout").addEventListener("click", () => {
+  showScreen(seasonMenuScreen);
+});
+
+document.querySelector("#back-season-menu-predictions").addEventListener("click", () => {
+  showScreen(seasonMenuScreen);
+});
 
 document.querySelector("#back-home").addEventListener("click", () => {
   showScreen(homeScreen);
@@ -1734,7 +1761,10 @@ function resetFormState() {
 }
 
 function showScreen(screen) {
+  seasonMenuScreen.classList.toggle("hidden", screen !== seasonMenuScreen);
   homeScreen.classList.toggle("hidden", screen !== homeScreen);
+  knockoutFollowScreen.classList.toggle("hidden", screen !== knockoutFollowScreen);
+  knockoutPredictionsScreen.classList.toggle("hidden", screen !== knockoutPredictionsScreen);
   currentGameScreen.classList.toggle("hidden", screen !== currentGameScreen);
   addCardScreen.classList.toggle("hidden", screen !== addCardScreen);
   updateScoresScreen.classList.toggle("hidden", screen !== updateScoresScreen);

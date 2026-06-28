@@ -14,12 +14,31 @@
         <div>
           <p class="eyebrow">UFSM Cachoeira do Sul</p>
           <h1>Bolão da Copa</h1>
-          <p class="hero-text">Cadastre cartelas, acompanhe palpites e atualize placares em um só lugar.</p>
+          <p class="hero-text">Acompanhe o mata-mata, faça seus palpites e consulte o histórico da fase de grupos.</p>
         </div>
         <div class="hero-badge">2026</div>
       </section>
 
-      <section id="home-screen" class="panel home-panel">
+      <section id="season-menu-screen" class="panel season-menu-panel">
+        <button class="main-action knockout-action" type="button" data-screen="knockout-follow">
+          <span>Acompanhar bolão mata-mata</span>
+          <small>Ranking e jogo atual do novo bolão eliminatório</small>
+        </button>
+        <button class="main-action prediction-action" type="button" data-screen="knockout-predictions">
+          <span>Faça seus palpites</span>
+          <small>Em breve: preencher os palpites do mata-mata</small>
+        </button>
+        <button class="main-action secondary-action" type="button" data-screen="group-history">
+          <span>Histórico bolão fase de grupos</span>
+          <small>Acessar tudo que já foi feito na primeira fase</small>
+        </button>
+      </section>
+
+      <section id="home-screen" class="panel home-panel hidden">
+        <button class="main-action secondary-action compact-action" type="button" id="back-season-menu">
+          <span>Voltar ao início</span>
+          <small>Escolher entre mata-mata e histórico</small>
+        </button>
         <button class="main-action current-game-action" type="button" data-screen="current-game">
           <span>Jogo atual</span>
           <small>Ver o último placar atualizado e como cada cartela pontuou</small>
@@ -44,6 +63,44 @@
           <span>Baixar backup</span>
           <small>Salvar cartelas e placares em um arquivo JSON</small>
         </button>
+      </section>
+
+      <section id="knockout-follow-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Mata-mata</p>
+            <h2>Acompanhar bolão mata-mata</h2>
+            <p>Nova área para acompanhar o jogo atual e a classificação do bolão eliminatório.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-season-menu-knockout">Voltar</button>
+        </div>
+
+        <div class="knockout-dashboard">
+          <section class="knockout-card knockout-current-card">
+            <p class="eyebrow">Jogo atual</p>
+            <h3>Mata-mata em preparação</h3>
+            <p>Quando configurarmos os palpites do mata-mata, aqui vai aparecer o jogo atual com placar, palpites e impacto na pontuação.</p>
+          </section>
+
+          <section class="knockout-card">
+            <p class="eyebrow">Classificação</p>
+            <h3>Ranking do mata-mata</h3>
+            <p>A classificação do novo bolão vai aparecer aqui, separada do histórico da fase de grupos.</p>
+          </section>
+        </div>
+      </section>
+
+      <section id="knockout-predictions-screen" class="panel form-panel hidden">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Palpites mata-mata</p>
+            <h2>Faça seus palpites</h2>
+            <p>Essa área será montada no próximo passo, quando definirmos os jogos e campos do mata-mata.</p>
+          </div>
+          <button class="ghost-button" type="button" id="back-season-menu-predictions">Voltar</button>
+        </div>
+
+        <p class="empty-state">Próxima etapa: configurar os jogos e as regras de palpite do mata-mata.</p>
       </section>
 
       <section id="current-game-screen" class="panel form-panel hidden">
