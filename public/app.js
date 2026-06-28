@@ -1700,7 +1700,7 @@ function formatAdvancePrediction(prediction, match) {
   }
 
   const teamName = prediction.advanceSide === "home" ? match.home : match.away;
-  return `<small class="current-penalty-pick">Pênaltis: ${formatTeamFlagTiny(teamName)} ${escapeHtml(teamName)}</small>`;
+  return `<small class="current-penalty-pick">Pênaltis: ${formatTeamFlagTiny(teamName)}</small>`;
 }
 
 async function fetchCartelas() {
