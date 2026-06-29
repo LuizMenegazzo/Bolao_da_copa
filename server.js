@@ -21,8 +21,22 @@ const KNOCKOUT_PLAYERS = [
   "Celso", "Criciele", "Cris", "Gustavo", "Gabriel",
   "Jeff", "Vandrei", "João Lauro", "Laura", "Thieli",
   "Anderson", "Amandinha", "Luiz", "Daniel", "Carla",
-  "PC", "Nelson", "Dion", "Lucas", "Vinicius"
+  "PC", "Nelson", "Dion", "Lucas", "Vinicius", "Diogo"
 ];
+
+const KNOCKOUT_DEFAULT_PREDICTIONS = {
+  DIOGO: [
+    { winnerTeam: "BRASIL", opponentTeam: "JAPAO", homeScore: 2, awayScore: 0 },
+    { winnerTeam: "ALEMANHA", opponentTeam: "PARAGUAI", homeScore: 2, awayScore: 0 }
+  ]
+};
+
+const KNOCKOUT_TEAM_ALIASES = {
+  ALEMANHA: ["ALEMANHA", "GERMANY"],
+  BRASIL: ["BRASIL", "BRAZIL"],
+  JAPAO: ["JAPAO", "JAPAN"],
+  PARAGUAI: ["PARAGUAI", "PARAGUAY"]
+};
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -94,6 +108,85 @@ function getPublicKnockoutPlayers(playersByKey = {}) {
       hasPassword: Boolean(savedPlayer?.passwordHash)
     };
   });
+}
+
+function getKnockoutPredictionsWithDefaults(matches, savedPredictions = {}) {
+  const defaultPredictions = buildKnockoutDefaultPredictions(matches);
+  const allPlayerKeys = new Set([
+    ...Object.keys(defaultPredictions),
+    ...Object.keys(savedPredictions)
+  ]);
+
+  return [...allPlayerKeys].reduce((predictionsByPlayer, playerKey) => {
+    const savedPlayerPredictions = savedPredictions[playerKey]?.predictions || {};
+    const defaultPlayerPredictions = defaultPredictions[playerKey]?.predictions || {};
+
+    predictionsByPlayer[playerKey] = {
+      ...defaultPredictions[playerKey],
+      ...savedPredictions[playerKey],
+      predictions: {
+        ...defaultPlayerPredictions,
+        ...savedPlayerPredictions
+      }
+    };
+
+    return predictionsByPlayer;
+  }, {});
+}
+
+function buildKnockoutDefaultPredictions(matches) {
+  return Object.entries(KNOCKOUT_DEFAULT_PREDICTIONS).reduce((defaults, [playerKey, playerPredictions]) => {
+    const predictions = {};
+
+    for (const predictionConfig of playerPredictions) {
+      const matchPrediction = resolveDefaultPredictionForMatch(matches, predictionConfig);
+
+      if (matchPrediction) {
+        predictions[matchPrediction.matchId] = matchPrediction.prediction;
+      }
+    }
+
+    if (Object.keys(predictions).length) {
+      defaults[playerKey] = {
+        predictions,
+        updatedAt: null
+      };
+    }
+
+    return defaults;
+  }, {});
+}
+
+function resolveDefaultPredictionForMatch(matches, predictionConfig) {
+  const match = matches.find((candidate) => (
+    teamMatchesAlias(candidate.home, predictionConfig.winnerTeam) &&
+    teamMatchesAlias(candidate.away, predictionConfig.opponentTeam)
+  ) || (
+    teamMatchesAlias(candidate.away, predictionConfig.winnerTeam) &&
+    teamMatchesAlias(candidate.home, predictionConfig.opponentTeam)
+  ));
+
+  if (!match) {
+    return null;
+  }
+
+  const winnerSide = teamMatchesAlias(match.home, predictionConfig.winnerTeam) ? "home" : "away";
+
+  return {
+    matchId: match.id,
+    prediction: {
+      homeScore: winnerSide === "home" ? predictionConfig.homeScore : predictionConfig.awayScore,
+      awayScore: winnerSide === "home" ? predictionConfig.awayScore : predictionConfig.homeScore,
+      advanceSide: winnerSide
+    }
+  };
+}
+
+function teamMatchesAlias(teamName, aliasKey) {
+  const normalizedTeamName = getPlayerKey(teamName);
+  const aliases = KNOCKOUT_TEAM_ALIASES[aliasKey] || [aliasKey];
+
+  return aliases.some((alias) => getPlayerKey(alias) === normalizedTeamName);
 }
 
 function hashPassword(password, salt = randomBytes(16).toString("hex")) {
@@ -523,6 +616,8 @@ async function handleApiRequest(request, response, pathname) {
         return;
       }
 
+      const knockoutMatches = await storage.getKnockoutMatches();
+
       sendBackupJson(response, {
         generatedAt: new Date().toISOString(),
         app: "Bolão da Copa UFSM Cachoeira do Sul",
@@ -531,8 +626,11 @@ async function handleApiRequest(request, response, pathname) {
         results: await storage.getResults(),
         knockout: {
           players: getPublicKnockoutPlayers(await storage.getKnockoutPlayers()),
-          matches: await storage.getKnockoutMatches(),
-          predictions: await storage.getKnockoutPredictions(),
+          matches: knockoutMatches,
+          predictions: getKnockoutPredictionsWithDefaults(
+            knockoutMatches,
+            await storage.getKnockoutPredictions()
+          ),
           results: await storage.getKnockoutResults()
         },
         sync: scoreSync.getStatus()
@@ -572,7 +670,10 @@ async function handleApiRequest(request, response, pathname) {
       }
 
       const playersByKey = await storage.getKnockoutPlayers();
-      const predictions = await storage.getKnockoutPredictions();
+      const predictions = getKnockoutPredictionsWithDefaults(
+        knockoutState.matches,
+        await storage.getKnockoutPredictions()
+      );
 
       sendJson(response, 200, {
         players: getPublicKnockoutPlayers(playersByKey),
@@ -621,7 +722,11 @@ async function handleApiRequest(request, response, pathname) {
         return;
       }
 
-      const allPredictions = await storage.getKnockoutPredictions();
+      const matches = await storage.getKnockoutMatches();
+      const allPredictions = getKnockoutPredictionsWithDefaults(
+        matches,
+        await storage.getKnockoutPredictions()
+      );
 
       sendJson(response, 200, {
         player: {
@@ -660,7 +765,10 @@ async function handleApiRequest(request, response, pathname) {
         return;
       }
 
-      const allPredictions = await storage.getKnockoutPredictions();
+      const allPredictions = getKnockoutPredictionsWithDefaults(
+        matches,
+        await storage.getKnockoutPredictions()
+      );
       const currentPredictions = allPredictions[playerKey]?.predictions || {};
       const nextPredictions = {
         ...currentPredictions,

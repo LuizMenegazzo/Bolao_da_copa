@@ -219,10 +219,11 @@ const PLAYER_CHIBIS = {
   "NELSON": "nelson.webp",
   "DION": "dion.webp",
   "LUCAS": "lucas.webp",
-  "VINICIUS": "vinicius.webp"
+  "VINICIUS": "vinicius.webp",
+  "DIOGO": "diogo.webp"
 };
 
-const CHIBI_ASSET_VERSION = "2026-06-26-1";
+const CHIBI_ASSET_VERSION = "2026-06-29-1";
 const MATE_CHIBI_KEYS = new Set(["AMANDINHA", "CARLA", "CRICIELE", "CRIS", "LAURA", "THIELI"]);
 const COUPLE_CHIBIS = [
   { keys: ["LUIZ", "AMANDINHA"], file: "luiz_amandinha.webp" },
