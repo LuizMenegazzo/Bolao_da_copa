@@ -16,7 +16,7 @@ const ESPN_SUMMARY_BASE_URL =
   process.env.ESPN_SUMMARY_URL ||
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary";
 const KNOCKOUT_FETCH_DAYS = Number(process.env.KNOCKOUT_FETCH_DAYS || 30);
-const KNOCKOUT_FETCH_PAST_DAYS = Number(process.env.KNOCKOUT_FETCH_PAST_DAYS || 7);
+const KNOCKOUT_FETCH_PAST_DAYS = Number(process.env.KNOCKOUT_FETCH_PAST_DAYS || 1);
 
 const KNOCKOUT_PLAYERS = [
   "Celso", "Criciele", "Cris", "Gustavo", "Gabriel",
@@ -308,11 +308,19 @@ async function fetchEspnKnockoutMatches() {
   }));
 
   const eventsById = new Map(eventLists.flat().map((event) => [String(event.id), event]));
-  const events = [...eventsById.values()];
+  const events = [...eventsById.values()].filter(isKnockoutEvent);
   const matches = events.map(mapEspnKnockoutMatch).filter(Boolean);
   const enrichedMatches = await Promise.all(matches.map(enrichKnockoutMatchFromSummary));
 
   return enrichedMatches;
+}
+
+function isKnockoutEvent(event) {
+  const seasonSlug = String(event.season?.slug || "").toLowerCase();
+  const seasonName = String(event.season?.displayName || event.season?.name || "").toLowerCase();
+  const altGameNote = String(event.competitions?.[0]?.altGameNote || "").toLowerCase();
+
+  return ![seasonSlug, seasonName, altGameNote].some((value) => value.includes("group"));
 }
 
 function mapEspnKnockoutMatch(event) {
@@ -418,11 +426,20 @@ function translateTeamName(teamName) {
 }
 
 function translateKnockoutMatchTeams(matches) {
-  return matches.map((match) => ({
-    ...match,
-    home: translateTeamName(match.home),
-    away: translateTeamName(match.away)
-  }));
+  return matches
+    .filter(isKnockoutMatchPayload)
+    .map((match) => ({
+      ...match,
+      home: translateTeamName(match.home),
+      away: translateTeamName(match.away)
+    }));
+}
+
+function isKnockoutMatchPayload(match) {
+  const round = String(match.round || "").toLowerCase();
+  const status = String(match.status || "").toLowerCase();
+
+  return ![round, status].some((value) => value.includes("group"));
 }
 
 async function syncKnockoutFromEspn() {
