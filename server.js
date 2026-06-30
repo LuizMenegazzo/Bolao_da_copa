@@ -16,6 +16,7 @@ const ESPN_SUMMARY_BASE_URL =
   process.env.ESPN_SUMMARY_URL ||
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary";
 const KNOCKOUT_FETCH_DAYS = Number(process.env.KNOCKOUT_FETCH_DAYS || 30);
+const KNOCKOUT_FETCH_PAST_DAYS = Number(process.env.KNOCKOUT_FETCH_PAST_DAYS || 7);
 
 const KNOCKOUT_PLAYERS = [
   "Celso", "Criciele", "Cris", "Gustavo", "Gabriel",
@@ -36,6 +37,59 @@ const KNOCKOUT_TEAM_ALIASES = {
   BRASIL: ["BRASIL", "BRAZIL"],
   JAPAO: ["JAPAO", "JAPAN"],
   PARAGUAI: ["PARAGUAI", "PARAGUAY"]
+};
+
+const ESPN_TEAM_TRANSLATIONS = {
+  "Algeria": "Argélia",
+  "Argentina": "Argentina",
+  "Australia": "Austrália",
+  "Austria": "Áustria",
+  "Belgium": "Bélgica",
+  "Bosnia and Herzegovina": "Bósnia",
+  "Brazil": "Brasil",
+  "Canada": "Canadá",
+  "Cape Verde": "Cabo Verde",
+  "Colombia": "Colômbia",
+  "Costa Rica": "Costa Rica",
+  "Croatia": "Croácia",
+  "Curaçao": "Curaçao",
+  "Czech Republic": "República Tcheca",
+  "Czechia": "República Tcheca",
+  "DR Congo": "RD Congo",
+  "Ecuador": "Equador",
+  "Egypt": "Egito",
+  "England": "Inglaterra",
+  "France": "França",
+  "Germany": "Alemanha",
+  "Ghana": "Gana",
+  "Haiti": "Haiti",
+  "Iran": "Irã",
+  "Iraq": "Iraque",
+  "Ivory Coast": "Costa do Marfim",
+  "Japan": "Japão",
+  "Jordan": "Jordânia",
+  "Mexico": "México",
+  "Morocco": "Marrocos",
+  "Netherlands": "Holanda",
+  "New Zealand": "Nova Zelândia",
+  "Norway": "Noruega",
+  "Panama": "Panamá",
+  "Paraguay": "Paraguai",
+  "Portugal": "Portugal",
+  "Qatar": "Catar",
+  "Saudi Arabia": "Arábia Saudita",
+  "Scotland": "Escócia",
+  "Senegal": "Senegal",
+  "South Africa": "África do Sul",
+  "South Korea": "Coreia do Sul",
+  "Spain": "Espanha",
+  "Sweden": "Suécia",
+  "Switzerland": "Suíça",
+  "Tunisia": "Tunísia",
+  "Turkey": "Turquia",
+  "United States": "Estados Unidos",
+  "Uruguay": "Uruguai",
+  "Uzbekistan": "Uzbequistão"
 };
 
 const contentTypes = {
@@ -207,17 +261,17 @@ function verifyPassword(password, savedPlayer) {
 }
 
 function getKnockoutFetchDates() {
-  const dates = [];
+  const dates = new Set();
   const startDate = new Date();
   startDate.setHours(0, 0, 0, 0);
 
-  for (let dayOffset = 0; dayOffset <= KNOCKOUT_FETCH_DAYS; dayOffset += 1) {
+  for (let dayOffset = -KNOCKOUT_FETCH_PAST_DAYS; dayOffset <= KNOCKOUT_FETCH_DAYS; dayOffset += 1) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + dayOffset);
-    dates.push(date.toISOString().slice(0, 10).replace(/-/g, ""));
+    dates.add(date.toISOString().slice(0, 10).replace(/-/g, ""));
   }
 
-  return dates;
+  return [...dates];
 }
 
 async function fetchEspnKnockoutMatches() {
@@ -253,7 +307,8 @@ async function fetchEspnKnockoutMatches() {
     }
   }));
 
-  const events = eventLists.flat();
+  const eventsById = new Map(eventLists.flat().map((event) => [String(event.id), event]));
+  const events = [...eventsById.values()];
   const matches = events.map(mapEspnKnockoutMatch).filter(Boolean);
   const enrichedMatches = await Promise.all(matches.map(enrichKnockoutMatchFromSummary));
 
@@ -354,7 +409,20 @@ async function fetchEspnEventSummary(eventId) {
 }
 
 function getEspnTeamName(team) {
-  return team?.displayName || team?.shortDisplayName || team?.name || team?.location || "";
+  const rawName = team?.displayName || team?.shortDisplayName || team?.name || team?.location || "";
+  return translateTeamName(rawName);
+}
+
+function translateTeamName(teamName) {
+  return ESPN_TEAM_TRANSLATIONS[teamName] || teamName;
+}
+
+function translateKnockoutMatchTeams(matches) {
+  return matches.map((match) => ({
+    ...match,
+    home: translateTeamName(match.home),
+    away: translateTeamName(match.away)
+  }));
 }
 
 async function syncKnockoutFromEspn() {
@@ -380,7 +448,7 @@ async function syncKnockoutFromEspn() {
   }
 
   return {
-    matches: await storage.getKnockoutMatches(),
+    matches: translateKnockoutMatchTeams(await storage.getKnockoutMatches()),
     results: await storage.getKnockoutResults(),
     syncedAt: new Date().toISOString()
   };
@@ -662,7 +730,7 @@ async function handleApiRequest(request, response, pathname) {
       } catch (error) {
         console.warn("Não foi possível sincronizar o mata-mata pela ESPN.", error.message);
         knockoutState = {
-          matches: await storage.getKnockoutMatches(),
+          matches: translateKnockoutMatchTeams(await storage.getKnockoutMatches()),
           results: await storage.getKnockoutResults(),
           syncedAt: null,
           syncError: error.message
