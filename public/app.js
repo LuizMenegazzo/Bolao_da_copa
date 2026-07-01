@@ -3024,6 +3024,14 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
     return coupleChibi;
   }
 
+  if (hasCurrentBlockMissingPrediction(entry, chibiContext)) {
+    if (key === "GABRIEL") {
+      return "gabriel_2_especial.webp";
+    }
+
+    return getChibiVariant(defaultChibi, "triste");
+  }
+
   if (currentBlockPoints.some((points) => points === 10)) {
     return getChibiVariant(defaultChibi, "especial");
   }
@@ -3081,6 +3089,16 @@ function getCurrentGamePoints(entry, chibiContext) {
 }
 
 function getCurrentBlockPoints(entry, chibiContext) {
+  return getCurrentBlockDetails(entry, chibiContext)
+    .map((detail) => Number(detail.basePoints ?? detail.points))
+    .filter((points) => Number.isFinite(points));
+}
+
+function hasCurrentBlockMissingPrediction(entry, chibiContext) {
+  return getCurrentBlockDetails(entry, chibiContext).some((detail) => detail.type === "missing" || detail.missing);
+}
+
+function getCurrentBlockDetails(entry, chibiContext) {
   if (!entry || !chibiContext?.latestMatchIds?.length) {
     return [];
   }
@@ -3090,9 +3108,7 @@ function getCurrentBlockPoints(entry, chibiContext) {
     ? entry.currentDetails
     : entry.details?.filter((detail) => latestMatchIds.has(detail.match.id));
 
-  return (currentDetails || [])
-    .map((detail) => Number(detail.basePoints ?? detail.points))
-    .filter((points) => Number.isFinite(points));
+  return currentDetails || [];
 }
 
 function isBottomThree(entry, chibiContext) {
