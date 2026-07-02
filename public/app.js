@@ -223,7 +223,7 @@ const PLAYER_CHIBIS = {
   "DIOGO": "diogo.webp"
 };
 
-const CHIBI_ASSET_VERSION = "2026-07-02-1";
+const CHIBI_ASSET_VERSION = "2026-07-02-2";
 const MATE_CHIBI_KEYS = new Set(["AMANDINHA", "CARLA", "CRICIELE", "CRIS", "LAURA", "THIELI"]);
 const COUPLE_CHIBIS = [
   { keys: ["LUIZ", "AMANDINHA"], file: "luiz_amandinha.webp" },
@@ -3026,10 +3026,6 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
   }
 
   if (hasCurrentBlockMissingPrediction(entry, chibiContext)) {
-    if (key === "GABRIEL") {
-      return "gabriel_2_especial.webp";
-    }
-
     return getChibiVariant(defaultChibi, "triste");
   }
 
@@ -3042,7 +3038,7 @@ function getChibiFile(playerName, entry = null, chibiContext = null) {
   }
 
   if (key === "GABRIEL" && currentBlockPoints.some((points) => points === -2)) {
-    return "gabriel_2_especial.webp";
+    return getChibiVariant(defaultChibi, "triste");
   }
 
   if (entry?.rank === 1) {
