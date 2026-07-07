@@ -223,7 +223,12 @@ const PLAYER_CHIBIS = {
   "DIOGO": "diogo.webp"
 };
 
-const CHIBI_ASSET_VERSION = "2026-07-02-3";
+const CHIBI_ASSET_VERSION = "2026-07-06-1";
+const CHIBI_VARIANT_OVERRIDES = {
+  "anderson:especial": "anderson_especial_20260706.webp",
+  "laura:especial": "laura_especial_20260706.webp",
+  "nelson:especial": "nelson_especial_20260706.webp"
+};
 const MATE_CHIBI_KEYS = new Set(["AMANDINHA", "CARLA", "CRICIELE", "CRIS", "LAURA", "THIELI"]);
 const COUPLE_CHIBIS = [
   { keys: ["LUIZ", "AMANDINHA"], file: "luiz_amandinha.webp" },
@@ -3160,7 +3165,8 @@ function isBottomThree(entry, chibiContext) {
 }
 
 function getChibiVariant(defaultChibi, variant) {
-  return `${defaultChibi.replace(/\.webp$/i, "")}_${variant}.webp`;
+  const baseName = defaultChibi.replace(/\.webp$/i, "");
+  return CHIBI_VARIANT_OVERRIDES[`${baseName.toLowerCase()}:${variant}`] || `${baseName}_${variant}.webp`;
 }
 
 function getPersonKey(name) {
