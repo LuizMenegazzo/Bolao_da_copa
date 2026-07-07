@@ -762,6 +762,21 @@ button {
   justify-content: center;
 }
 
+.knockout-round-multiplier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #7c2d12;
+  background: linear-gradient(135deg, #fff3c4, #ffd36e);
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.22);
+  font-size: 0.78rem;
+  font-weight: 1000;
+}
+
 .knockout-save-button {
   width: 100%;
   min-width: 150px;

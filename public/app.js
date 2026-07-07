@@ -237,6 +237,12 @@ const COUPLE_CHIBIS = [
   { keys: ["CRIS", "PC"], file: "cris_pc.webp" },
   { keys: ["LUCAS", "VINICIUS"], file: "lucas_vinicius.webp" }
 ];
+const KNOCKOUT_ROUND_MULTIPLIERS = {
+  quarterfinals: { label: "Quartas de final", multiplier: 2 },
+  semifinals: { label: "Semifinal", multiplier: 3 },
+  "3rd-place-match": { label: "Disputa de 3º lugar", multiplier: 3 },
+  final: { label: "Final", multiplier: 5 }
+};
 
 let groups = [];
 let cartelas = [];
@@ -1085,12 +1091,18 @@ function renderKnockoutPredictionMatch(match, prediction) {
   const lockInfo = match.lock || getKnockoutLockInfo(match);
   const hasPrediction = Number.isInteger(prediction?.homeScore) && Number.isInteger(prediction?.awayScore);
   const selectedAdvanceSide = prediction?.advanceSide || "";
+  const roundInfo = getKnockoutRoundInfo(match);
 
   return `
     <article class="upcoming-prediction-card knockout-prediction-match ${lockInfo.locked ? "locked" : ""}" data-knockout-match-row="${match.id}">
       <div class="upcoming-match-meta">
         <strong>${formatKnockoutDate(match)}</strong>
-        <span>${formatKnockoutTime(match)} • Mata-mata</span>
+        <span>${formatKnockoutTime(match)} • ${escapeHtml(roundInfo.label)}</span>
+        ${roundInfo.multiplier > 1 ? `
+          <small class="knockout-round-multiplier">
+            ⭐ Vale x${roundInfo.multiplier}
+          </small>
+        ` : ""}
       </div>
       <div class="upcoming-match-teams">
         <span>${formatTeamNameImage(match.home)}</span>
@@ -1293,6 +1305,8 @@ function scoreKnockoutPlayer(player, scoredMatches) {
 
     const score = scorePrediction(prediction, result);
     const advancePoints = scoreAdvancePrediction(prediction, match, result);
+    const multiplier = getKnockoutRoundMultiplier(match);
+    const rawPoints = score.points + advancePoints;
 
     return {
       match,
@@ -1300,8 +1314,9 @@ function scoreKnockoutPlayer(player, scoredMatches) {
       result,
       ...score,
       basePoints: score.points,
+      multiplier,
       advancePoints,
-      points: score.points + advancePoints
+      points: rawPoints * multiplier
     };
   });
 
@@ -1328,6 +1343,32 @@ function scoreAdvancePrediction(prediction, match, result) {
   }
 
   return prediction?.advanceSide === match.winnerSide ? 3 : 0;
+}
+
+function getKnockoutRoundInfo(match) {
+  const round = String(match?.round || "").toLowerCase();
+
+  if (round.includes("3rd") || round.includes("third") || round.includes("bronze")) {
+    return KNOCKOUT_ROUND_MULTIPLIERS["3rd-place-match"];
+  }
+
+  if (round.includes("semi")) {
+    return KNOCKOUT_ROUND_MULTIPLIERS.semifinals;
+  }
+
+  if (round.includes("quarter")) {
+    return KNOCKOUT_ROUND_MULTIPLIERS.quarterfinals;
+  }
+
+  if (round === "final" || round.endsWith("-final") || round.endsWith(" final")) {
+    return KNOCKOUT_ROUND_MULTIPLIERS.final;
+  }
+
+  return { label: "Mata-mata", multiplier: 1 };
+}
+
+function getKnockoutRoundMultiplier(match) {
+  return getKnockoutRoundInfo(match).multiplier;
 }
 
 function isKnockoutDecidedOnPenalties(match, result) {
