@@ -402,12 +402,16 @@ knockoutPredictionContent.addEventListener("click", async (event) => {
 
 knockoutAdminContent.addEventListener("click", async (event) => {
   const resetButton = event.target.closest("button[data-reset-knockout-password]");
+  const setButton = event.target.closest("button[data-set-knockout-password]");
 
-  if (!resetButton) {
+  if (setButton) {
+    await setKnockoutPassword(setButton.dataset.setKnockoutPassword);
     return;
   }
 
-  await resetKnockoutPassword(resetButton.dataset.resetKnockoutPassword);
+  if (resetButton) {
+    await resetKnockoutPassword(resetButton.dataset.resetKnockoutPassword);
+  }
 });
 
 document.querySelectorAll("[data-follow-tab]").forEach((button) => {
@@ -824,14 +828,23 @@ function renderKnockoutAdminPasswords(players) {
             <strong>${escapeHtml(player.playerName)}</strong>
             <span>${player.hasPassword ? "Senha criada" : "Ainda sem senha"}</span>
             <small>${escapeHtml(player.password || "Aguardando primeiro acesso")}</small>
-            <button
-              class="ghost-button admin-reset-button"
-              type="button"
-              data-reset-knockout-password="${escapeHtml(player.playerKey)}"
-              ${player.hasPassword ? "" : "disabled"}
-            >
-              Redefinir senha
-            </button>
+            <div class="admin-password-actions">
+              <button
+                class="ghost-button admin-reset-button"
+                type="button"
+                data-reset-knockout-password="${escapeHtml(player.playerKey)}"
+                ${player.hasPassword ? "" : "disabled"}
+              >
+                Deixar sem senha
+              </button>
+              <button
+                class="ghost-button admin-set-button"
+                type="button"
+                data-set-knockout-password="${escapeHtml(player.playerKey)}"
+              >
+                Definir senha
+              </button>
+            </div>
           </div>
         </article>
       `).join("")}
@@ -865,6 +878,47 @@ async function resetKnockoutPassword(playerKey) {
     }
 
     showToast(`Senha de ${data.player.playerName} redefinida.`);
+    await loadKnockoutAdminData();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function setKnockoutPassword(playerKey) {
+  const setButton = knockoutAdminContent.querySelector(`[data-set-knockout-password="${CSS.escape(playerKey)}"]`);
+  const playerCard = setButton?.closest(".admin-password-card");
+  const playerName = playerCard?.querySelector("strong")?.textContent || "participante";
+  const newPassword = window.prompt(`Nova senha para ${playerName}:`);
+
+  if (newPassword === null) {
+    return;
+  }
+
+  if (String(newPassword).length < 3) {
+    showToast("Informe uma senha com pelo menos 3 caracteres.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/knockout/admin/passwords/${encodeURIComponent(playerKey)}`, {
+      method: "PATCH",
+      headers: {
+        ...getAdminHeaders(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ newPassword })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAdminPassword();
+      }
+
+      throw new Error(data.error || "Não foi possível definir a senha.");
+    }
+
+    showToast(`Senha de ${data.player.playerName} definida.`);
     await loadKnockoutAdminData();
   } catch (error) {
     showToast(error.message);

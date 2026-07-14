@@ -164,6 +164,20 @@ function getPublicKnockoutPlayers(playersByKey = {}) {
   });
 }
 
+function findKnockoutPlayerByKey(playerKey) {
+  const normalizedPlayerKey = getPlayerKey(playerKey);
+  const playerName = KNOCKOUT_PLAYERS.find((currentPlayerName) => getPlayerKey(currentPlayerName) === normalizedPlayerKey);
+
+  if (!playerName) {
+    return null;
+  }
+
+  return {
+    key: getPlayerKey(playerName),
+    name: playerName
+  };
+}
+
 function getKnockoutPredictionsWithDefaults(matches, savedPredictions = {}) {
   const defaultPredictions = buildKnockoutDefaultPredictions(matches);
   const allPlayerKeys = new Set([
@@ -920,13 +934,53 @@ async function handleApiRequest(request, response, pathname) {
       return;
     }
 
+    if ((request.method === "PUT" || request.method === "PATCH") && knockoutPasswordResetMatch) {
+      if (!requireAdmin(request, response)) {
+        return;
+      }
+
+      const playerKey = decodeURIComponent(knockoutPasswordResetMatch[1]);
+      const player = findKnockoutPlayerByKey(playerKey);
+
+      if (!player) {
+        sendJson(response, 404, { error: "Participante nÃ£o encontrado." });
+        return;
+      }
+
+      const payload = await readRequestBody(request);
+      const newPassword = String(payload.newPassword || payload.password || "");
+
+      if (newPassword.length < 3) {
+        sendJson(response, 400, { error: "Informe uma senha com pelo menos 3 caracteres." });
+        return;
+      }
+
+      const { hash, salt } = hashPassword(newPassword);
+      await storage.upsertKnockoutPlayer({
+        playerKey: player.key,
+        playerName: player.name,
+        passwordHash: hash,
+        passwordSalt: salt
+      });
+
+      sendJson(response, 200, {
+        player: {
+          playerKey: player.key,
+          playerName: player.name,
+          hasPassword: true,
+          passwordStatus: "Senha redefinida"
+        }
+      });
+      return;
+    }
+
     if (request.method === "DELETE" && knockoutPasswordResetMatch) {
       if (!requireAdmin(request, response)) {
         return;
       }
 
       const playerKey = decodeURIComponent(knockoutPasswordResetMatch[1]);
-      const player = KNOCKOUT_PLAYERS.find((currentPlayer) => currentPlayer.key === playerKey);
+      const player = findKnockoutPlayerByKey(playerKey);
 
       if (!player) {
         sendJson(response, 404, { error: "Participante não encontrado." });
